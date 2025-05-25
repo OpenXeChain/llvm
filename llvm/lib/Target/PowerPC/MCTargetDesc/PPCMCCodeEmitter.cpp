@@ -202,9 +202,12 @@ unsigned PPCMCCodeEmitter::getImm16Encoding(const MCInst &MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
+  // Add a fixup for the immediate field.;
 
-  // Add a fixup for the immediate field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
+  Fixups.push_back(MCFixup::create(IsLittleEndian                      ? 0
+                                   : CTX.getTargetTriple().isXbox360() ? 0
+                                                                       : 2,
+                                   MO.getExpr(),
                                    (MCFixupKind)PPC::fixup_ppc_half16));
   return 0;
 }
@@ -247,7 +250,10 @@ unsigned PPCMCCodeEmitter::getDispRIEncoding(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI) & 0xFFFF;
 
   // Add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
+  Fixups.push_back(MCFixup::create(IsLittleEndian                      ? 0
+                                   : CTX.getTargetTriple().isXbox360() ? 0
+                                                                       : 2,
+                                   MO.getExpr(),
                                    (MCFixupKind)PPC::fixup_ppc_half16));
   return 0;
 }
@@ -261,7 +267,10 @@ PPCMCCodeEmitter::getDispRIXEncoding(const MCInst &MI, unsigned OpNo,
     return ((getMachineOpValue(MI, MO, Fixups, STI) >> 2) & 0x3FFF);
 
   // Add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
+  Fixups.push_back(MCFixup::create(IsLittleEndian                      ? 0
+                                   : CTX.getTargetTriple().isXbox360() ? 0
+                                                                       : 2,
+                                   MO.getExpr(),
                                    (MCFixupKind)PPC::fixup_ppc_half16ds));
   return 0;
 }
@@ -278,7 +287,10 @@ PPCMCCodeEmitter::getDispRIX16Encoding(const MCInst &MI, unsigned OpNo,
   }
 
   // Otherwise add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian ? 0 : 2, MO.getExpr(),
+  Fixups.push_back(MCFixup::create(IsLittleEndian                      ? 0
+                                   : CTX.getTargetTriple().isXbox360() ? 0
+                                                                       : 2,
+                                   MO.getExpr(),
                                    (MCFixupKind)PPC::fixup_ppc_half16dq));
   return 0;
 }

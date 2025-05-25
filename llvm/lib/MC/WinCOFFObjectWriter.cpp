@@ -773,8 +773,8 @@ void WinCOFFWriter::assignFileOffsets(MCAssembler &Asm) {
 
       for (auto &Relocation : Sec->Relocations) {
         assert(Relocation.Symb->getIndex() != -1);
-        if (Header.Machine != COFF::IMAGE_FILE_MACHINE_R4000 ||
-            Relocation.Data.Type != COFF::IMAGE_REL_MIPS_PAIR) {
+        if ((Header.Machine != COFF::IMAGE_FILE_MACHINE_R4000 && Header.Machine != COFF::IMAGE_FILE_MACHINE_XBOX360) ||
+            (Relocation.Data.Type != COFF::IMAGE_REL_MIPS_PAIR && Relocation.Data.Type != COFF::IMAGE_REL_PPC_PAIR)) {
           Relocation.Data.SymbolTableIndex = Relocation.Symb->getIndex();
         }
       }
@@ -988,6 +988,17 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
       // be followed by IMAGE_REL_MIPS_PAIR
       auto RelocPair = Reloc;
       RelocPair.Data.Type = COFF::IMAGE_REL_MIPS_PAIR;
+      Sec->Relocations.push_back(RelocPair);
+    }
+
+    if (Header.Machine == COFF::IMAGE_FILE_MACHINE_XBOX360 &&
+        (Reloc.Data.Type == COFF::IMAGE_REL_PPC_REFHI ||
+         Reloc.Data.Type == COFF::IMAGE_REL_PPC_SECRELHI ||
+         Reloc.Data.Type == COFF::IMAGE_REL_PPC_REFLO || Reloc.Data.Type == COFF::IMAGE_REL_PPC_SECRELLO)) {
+      // IMAGE_REL_PPC_REFHI, IMAGE_REL_PPC_SECRELHI, IMAGE_REL_PPC_REFLO and IMAGE_REL_PPC_SECRELLO *must*
+      // be followed by IMAGE_REL_PPC_PAIR
+      auto RelocPair = Reloc;
+      RelocPair.Data.Type = COFF::IMAGE_REL_PPC_PAIR;
       Sec->Relocations.push_back(RelocPair);
     }
   }
