@@ -10,6 +10,8 @@ add_llvm_component_library(LLVMPowerPCDesc
   PPCXCOFFObjectWriter.cpp
   PPCELFStreamer.cpp
   PPCXCOFFStreamer.cpp
+  PPCCOFFObjectWriter.cpp
+  PPCCOFFStreamer.cpp
 
   LINK_COMPONENTS
   BinaryFormat
