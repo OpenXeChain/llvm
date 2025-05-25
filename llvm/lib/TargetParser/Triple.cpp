@@ -319,6 +319,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case LiteOS: return "liteos";
   case XROS: return "xros";
   case Vulkan: return "vulkan";
+  case Xbox360: return "xbox360";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -711,6 +712,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("liteos", Triple::LiteOS)
     .StartsWith("serenity", Triple::Serenity)
     .StartsWith("vulkan", Triple::Vulkan)
+    .StartsWith("xbox360", Triple::Xbox360)
     .Default(Triple::UnknownOS);
 }
 
@@ -984,6 +986,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ppc:
     if (T.isOSAIX())
       return Triple::XCOFF;
+    if (T.isXbox360())
+      return Triple::COFF;
     if (T.isOSDarwin())
       return Triple::MachO;
     return Triple::ELF;

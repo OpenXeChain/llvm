@@ -187,6 +187,8 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatXCOFF())
     MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple);
+  else if (TheTriple.isOSBinFormatCOFF())
+    MAI = new PPCCOFFMCAsmInfo(isPPC64, TheTriple);
   else
     MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple);
 
@@ -524,6 +526,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
 
     // Register the XCOFF streamer.
     TargetRegistry::RegisterXCOFFStreamer(*T, createPPCXCOFFStreamer);
+
+    // Register the COFF streamer.
+    TargetRegistry::RegisterCOFFStreamer(*T, createPPCCOFFStreamer);
 
     // Register the object target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

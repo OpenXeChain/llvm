@@ -15,6 +15,7 @@
 
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCAsmInfoXCOFF.h"
+#include "llvm/MC/MCAsmInfoCOFF.h"
 
 namespace llvm {
 class Triple;
@@ -33,6 +34,12 @@ public:
   explicit PPCXCOFFMCAsmInfo(bool is64Bit, const Triple &);
 };
 
+class PPCCOFFMCAsmInfo : public MCAsmInfoCOFF {
+  void anchor() override;
+
+public:
+  explicit PPCCOFFMCAsmInfo(bool is64Bit, const Triple &);
+};
 } // namespace llvm
 
 #endif

@@ -279,6 +279,25 @@ XCOFFPPCAsmBackend::getFixupKind(StringRef Name) const {
       .Default(std::nullopt);
 }
 
+class CoffPPCAsmBackend : public PPCAsmBackend {
+public:
+  CoffPPCAsmBackend(const Target &T, const Triple &TT) : PPCAsmBackend(T, TT) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createPPCCOFFObjectWriter();
+  }
+
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+};
+
+std::optional<MCFixupKind>
+CoffPPCAsmBackend::getFixupKind(StringRef Name) const {
+  return StringSwitch<std::optional<MCFixupKind>>(Name)
+      .Case("R_REF", (MCFixupKind)PPC::fixup_ppc_nofixup)
+      .Default(std::nullopt);
+}
+
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
@@ -286,6 +305,9 @@ MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatXCOFF())
     return new XCOFFPPCAsmBackend(T, TT);
+
+  if (TT.isOSBinFormatCOFF())
+    return new CoffPPCAsmBackend(T, TT);
 
   return new ELFPPCAsmBackend(T, TT);
 }

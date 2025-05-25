@@ -238,6 +238,9 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSAIX())
     return std::make_unique<TargetLoweringObjectFileXCOFF>();
 
+  if (TT.isXbox360())
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
+
   return std::make_unique<PPC64LinuxTargetObjectFile>();
 }
 
@@ -295,6 +298,9 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   if (JIT)
     return CodeModel::Small;
   if (TT.isOSAIX())
+    return CodeModel::Small;
+
+  if (TT.isXbox360())
     return CodeModel::Small;
 
   assert(TT.isOSBinFormatELF() && "All remaining PPC OSes are ELF based.");

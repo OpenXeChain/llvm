@@ -32,6 +32,8 @@ class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
+class MCObjectWriter;
+class MCStreamer;
 class Target;
 
 namespace PPC {
@@ -59,6 +61,12 @@ MCAsmBackend *createPPCAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                   const MCRegisterInfo &MRI,
                                   const MCTargetOptions &Options);
 
+MCStreamer *createPPCCOFFStreamer(MCContext &C,
+                                      std::unique_ptr<MCAsmBackend> &&AB,
+                                      std::unique_ptr<MCObjectWriter> &&OW,
+                                      std::unique_ptr<MCCodeEmitter> &&CE);
+
+std::unique_ptr<MCObjectTargetWriter> createPPCCOFFObjectWriter();
 /// Construct an PPC ELF object writer.
 std::unique_ptr<MCObjectTargetWriter> createPPCELFObjectWriter(bool Is64Bit,
                                                                uint8_t OSABI);

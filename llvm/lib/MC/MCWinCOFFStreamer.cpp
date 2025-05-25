@@ -465,7 +465,7 @@ void MCWinCOFFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 
 // TODO: Implement this if you want to emit .comment section in COFF obj files.
 void MCWinCOFFStreamer::emitIdent(StringRef IdentString) {
-  llvm_unreachable("not implemented");
+//  llvm_unreachable("not implemented");
 }
 
 void MCWinCOFFStreamer::emitWinEHHandlerData(SMLoc Loc) {

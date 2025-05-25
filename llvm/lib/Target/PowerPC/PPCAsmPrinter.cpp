@@ -78,6 +78,7 @@
 #include <cstdint>
 #include <memory>
 #include <new>
+#include <llvm/MC/MCSymbolCOFF.h>
 
 using namespace llvm;
 using namespace llvm::XCOFF;
@@ -303,6 +304,59 @@ public:
   void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
 
   void emitModuleCommandLines(Module &M) override;
+};
+
+
+class PPCXbox360AsmPrinter : public PPCAsmPrinter {
+private:
+  /// Symbols lowered from ExternalSymbolSDNodes, we will need to emit extern
+  /// linkage for them in AIX.
+  SmallSetVector<MCSymbol *, 8> ExtSymSDNodeSymbols;
+
+  /// A format indicator and unique trailing identifier to form part of the
+  /// sinit/sterm function names.
+  std::string FormatIndicatorAndUniqueModId;
+
+  // Record a list of GlobalAlias associated with a GlobalObject.
+  // This is used for AIX's extra-label-at-definition aliasing strategy.
+  DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
+      GOAliasMap;
+
+  uint16_t getNumberOfVRSaved();
+
+  SmallVector<const GlobalVariable *, 8> TOCDataGlobalVars;
+
+  void emitGlobalVariableHelper(const GlobalVariable *);
+
+  // Get the offset of an alias based on its AliaseeObject.
+  uint64_t getAliasOffset(const Constant *C);
+
+public:
+  PPCXbox360AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
+      : PPCAsmPrinter(TM, std::move(Streamer)) {
+    if (MAI->isLittleEndian())
+      report_fatal_error(
+          "cannot create Xbox 360 PPC Assembly Printer for a little-endian target");
+  }
+
+  StringRef getPassName() const override { return "Xbox 360 PPC Assembly Printer"; }
+
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
+
+  void SetupMachineFunction(MachineFunction &MF) override;
+
+  void emitFunctionEntryLabel() override;
+
+  void emitFunctionBodyEnd() override;
+
+  void emitEndOfAsmFile(Module &) override;
+
+  void emitInstruction(const MachineInstr *MI) override;
+
+  bool doFinalization(Module &M) override;
+
+  void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
 };
 
 } // end anonymous namespace
@@ -3356,6 +3410,9 @@ createPPCAsmPrinterPass(TargetMachine &tm,
   if (tm.getTargetTriple().isOSAIX())
     return new PPCAIXAsmPrinter(tm, std::move(Streamer));
 
+  if (tm.getTargetTriple().isXbox360())
+    return new PPCXbox360AsmPrinter(tm, std::move(Streamer));
+
   return new PPCLinuxAsmPrinter(tm, std::move(Streamer));
 }
 
@@ -3377,6 +3434,132 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
     RSOS.write('\0');
   }
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
+}
+
+void PPCXbox360AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
+  return AsmPrinter::SetupMachineFunction(MF);
+}
+
+uint16_t PPCXbox360AsmPrinter::getNumberOfVRSaved() {
+  // Calculate the number of VRs be saved.
+  // Vector registers 20 through 31 are marked as reserved and cannot be used
+  // in the default ABI.
+  const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
+  if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
+      TM.getAIXExtendedAltivecABI()) {
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    for (unsigned Reg = PPC::V20; Reg <= PPC::V31; ++Reg)
+      if (MRI.isPhysRegModified(Reg))
+        // Number of VRs saved.
+        return PPC::V31 - Reg + 1;
+  }
+  return 0;
+}
+
+void PPCXbox360AsmPrinter::emitFunctionBodyEnd() {
+
+}
+
+uint64_t PPCXbox360AsmPrinter::getAliasOffset(const Constant *C) {
+  if (auto *GA = dyn_cast<GlobalAlias>(C))
+    return getAliasOffset(GA->getAliasee());
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    const MCExpr *LowC = lowerConstant(CE);
+    const MCBinaryExpr *CBE = dyn_cast<MCBinaryExpr>(LowC);
+    if (!CBE)
+      return 0;
+    if (CBE->getOpcode() != MCBinaryExpr::Add)
+      report_fatal_error("Only adding an offset is supported now.");
+    auto *RHS = dyn_cast<MCConstantExpr>(CBE->getRHS());
+    if (!RHS)
+      report_fatal_error("Unable to get the offset of alias.");
+    return RHS->getValue();
+  }
+  return 0;
+}
+
+
+void PPCXbox360AsmPrinter::emitFunctionEntryLabel() {
+  // For functions without user defined section, it's not necessary to emit the
+  // label when we have individual function in its own csect.
+  if (!TM.getFunctionSections() || MF->getFunction().hasSection())
+    PPCAsmPrinter::emitFunctionEntryLabel();
+
+  // Emit aliasing label for function entry point label.
+  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+    OutStreamer->emitLabel(
+        getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
+}
+
+void PPCXbox360AsmPrinter::emitEndOfAsmFile(Module &M) {
+  return PPCAsmPrinter::emitEndOfAsmFile(M);
+}
+
+void PPCXbox360AsmPrinter::emitInstruction(const MachineInstr *MI) {
+  return PPCAsmPrinter::emitInstruction(MI);
+}
+
+bool PPCXbox360AsmPrinter::doFinalization(Module &M) {
+  // Do streamer related finalization for DWARF.
+  if (hasDebugInfo()) {
+    // Emit section end. This is used to tell the debug line section where the
+    // end is for a text section if we don't use .loc to represent the debug
+    // line.
+    auto *Sec = OutContext.getObjectFileInfo()->getTextSection();
+    OutStreamer->switchSectionNoPrint(Sec);
+    MCSymbol *Sym = Sec->getEndSymbol(OutContext);
+    OutStreamer->emitLabel(Sym);
+  }
+
+  for (MCSymbol *Sym : ExtSymSDNodeSymbols)
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
+  return PPCAsmPrinter::doFinalization(M);
+}
+
+void PPCXbox360AsmPrinter::emitXXStructorList(const DataLayout &DL,
+                                              const Constant *List,
+                                              bool IsCtor) {
+  SmallVector<Structor, 8> Structors;
+  preprocessXXStructorList(DL, List, Structors);
+  if (Structors.empty())
+    return;
+
+  unsigned Index = 0;
+  for (Structor &S : Structors) {
+    if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(S.Func))
+      S.Func = CE->getOperand(0);
+
+    llvm::GlobalAlias::create(
+        GlobalValue::ExternalLinkage,
+        (IsCtor ? llvm::Twine("__sinit") : llvm::Twine("__sterm")) +
+            llvm::Twine(convertToSinitPriority(S.Priority)) +
+            llvm::Twine("_", FormatIndicatorAndUniqueModId) +
+            llvm::Twine("_", llvm::utostr(Index++)),
+        cast<Function>(S.Func));
+  }
+}
+
+void PPCXbox360AsmPrinter::emitTTypeReference(const GlobalValue *GV,
+                                              unsigned Encoding) {
+  if (GV) {
+    TOCEntryType GlobalType = TOCType_GlobalInternal;
+    GlobalValue::LinkageTypes Linkage = GV->getLinkage();
+    if (Linkage == GlobalValue::ExternalLinkage ||
+        Linkage == GlobalValue::AvailableExternallyLinkage ||
+        Linkage == GlobalValue::ExternalWeakLinkage)
+      GlobalType = TOCType_GlobalExternal;
+    MCSymbol *TypeInfoSym = TM.getSymbol(GV);
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(TypeInfoSym, GlobalType);
+    const MCSymbol *TOCBaseSym =
+        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
+            ->getQualNameSymbol();
+    auto &Ctx = OutStreamer->getContext();
+    const MCExpr *Exp =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),
+                                MCSymbolRefExpr::create(TOCBaseSym, Ctx), Ctx);
+    OutStreamer->emitValue(Exp, GetSizeOfEncodedValue(Encoding));
+  } else
+    OutStreamer->emitIntValue(0, GetSizeOfEncodedValue(Encoding));
 }
 
 // Force static initialization.

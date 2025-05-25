@@ -239,7 +239,8 @@ public:
     LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
-    LastOSType = Vulkan
+    Xbox360,
+    LastOSType = Xbox360
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -546,6 +547,10 @@ public:
   /// and "osx" as OS X triples.
   bool isMacOSX() const {
     return getOS() == Triple::Darwin || getOS() == Triple::MacOSX;
+  }
+
+  bool isXbox360() const { 
+      return getOS() == Triple::Xbox360;
   }
 
   /// Is this an iOS triple.

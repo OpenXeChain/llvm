@@ -109,6 +109,7 @@ enum MachineTypes : unsigned {
   IMAGE_FILE_MACHINE_MIPSFPU16 = 0x466,
   IMAGE_FILE_MACHINE_POWERPC = 0x1F0,
   IMAGE_FILE_MACHINE_POWERPCFP = 0x1F1,
+  IMAGE_FILE_MACHINE_XBOX360 = 0x1F2,
   IMAGE_FILE_MACHINE_R4000 = 0x166,
   IMAGE_FILE_MACHINE_RISCV32 = 0x5032,
   IMAGE_FILE_MACHINE_RISCV64 = 0x5064,
@@ -433,6 +434,38 @@ enum RelocationTypesMips : unsigned {
   IMAGE_REL_MIPS_JMPADDR16 = 0x0010,
   IMAGE_REL_MIPS_REFWORDNB = 0x0022,
   IMAGE_REL_MIPS_PAIR = 0x0025,
+};
+
+enum RelocationTypesPPC : unsigned {
+  IMAGE_REL_PPC_ABSOLUTE     = 0x0000,  // NOP
+  IMAGE_REL_PPC_ADDR64       = 0x0001,  // 64-bit address
+  IMAGE_REL_PPC_ADDR32       = 0x0002,  // 32-bit address
+  IMAGE_REL_PPC_ADDR24       = 0x0003,  // 26-bit address, shifted left 2 (branch absolute)
+  IMAGE_REL_PPC_ADDR16       = 0x0004,  // 16-bit address
+  IMAGE_REL_PPC_ADDR14       = 0x0005,  // 16-bit address, shifted left 2 (load doubleword)
+  IMAGE_REL_PPC_REL24        = 0x0006,  // 26-bit PC-relative offset, shifted left 2 (branch relative)
+  IMAGE_REL_PPC_REL14        = 0x0007,  // 16-bit PC-relative offset, shifted left 2 (br cond relative)
+  IMAGE_REL_PPC_TOCREL16     = 0x0008,  // 16-bit offset from TOC base
+  IMAGE_REL_PPC_TOCREL14     = 0x0009,  // 16-bit offset from TOC base, shifted left 2 (load doubleword)
+  IMAGE_REL_PPC_ADDR32NB     = 0x000A,  // 32-bit addr w/o image base
+  IMAGE_REL_PPC_SECREL       = 0x000B,  // va of containing section (as in an image sectionhdr)
+  IMAGE_REL_PPC_SECTION      = 0x000C,  // sectionheader number
+  IMAGE_REL_PPC_IFGLUE       = 0x000D,  // substitute TOC restore instruction iff symbol is glue code
+  IMAGE_REL_PPC_IMGLUE       = 0x000E,  // symbol is glue code; virtual address is TOC restore instruction
+  IMAGE_REL_PPC_SECREL16     = 0x000F,  // va of containing section (limited to 16 bits)
+  IMAGE_REL_PPC_REFHI        = 0x0010,
+  IMAGE_REL_PPC_REFLO        = 0x0011,
+  IMAGE_REL_PPC_PAIR         = 0x0012,
+  IMAGE_REL_PPC_SECRELLO     = 0x0013,  // Low 16-bit section relative reference (used for >32k TLS)
+  IMAGE_REL_PPC_SECRELHI     = 0x0014,  // High 16-bit section relative reference (used for >32k TLS)
+  IMAGE_REL_PPC_GPREL        = 0x0015,
+  IMAGE_REL_PPC_TOKEN        = 0x0016,  // clr token
+
+  // Flags bits (not usually part of main enum but defined here for completeness)
+  IMAGE_REL_PPC_NEG          = 0x0100,  // subtract reloc value rather than adding it
+  IMAGE_REL_PPC_BRTAKEN      = 0x0200,  // fix branch prediction bit to predict branch taken
+  IMAGE_REL_PPC_BRNTAKEN     = 0x0400,  // fix branch prediction bit to predict branch not taken
+  IMAGE_REL_PPC_TOCDEFN      = 0x0800,  // toc slot defined in file (or, data in toc)
 };
 
 enum DynamicRelocationType : unsigned {
