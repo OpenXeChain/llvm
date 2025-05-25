@@ -158,6 +158,29 @@ void SectionChunk::applyRelX86(uint8_t *off, uint16_t type, OutputSection *os,
   }
 }
 
+
+void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
+                               uint64_t s, uint64_t p,
+                               uint64_t imageBase) const {
+  switch (type) {
+  case IMAGE_REL_PPC_REFHI: {
+   
+    break;
+  }
+  case IMAGE_REL_PPC_PAIR: {
+    
+    break;
+  }
+  case IMAGE_REL_PPC_REFLO: {
+
+    break;
+  }
+  default:
+    llvm_unreachable("lld: Unimplemented reloc type for ppc32 PE");
+    break;
+  }
+}
+
 static void applyMOV(uint8_t *off, uint16_t v) {
   write16le(off, (read16le(off) & 0xfbf0) | ((v & 0x800) >> 1) | ((v >> 12) & 0xf));
   write16le(off + 2, (read16le(off + 2) & 0x8f00) | ((v & 0x700) << 4) | (v & 0xff));
@@ -458,6 +481,9 @@ void SectionChunk::applyRelocation(uint8_t *off,
     break;
   case Triple::aarch64:
     applyRelARM64(off, rel.Type, os, s, p, imageBase);
+    break;
+  case Triple::ppc:
+    applyRelPPC(off, rel.Type, os, s, p, imageBase);
     break;
   default:
     llvm_unreachable("unknown machine type");

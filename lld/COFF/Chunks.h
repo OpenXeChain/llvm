@@ -277,6 +277,8 @@ public:
                    uint64_t p, uint64_t imageBase) const;
   void applyRelX86(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
                    uint64_t p, uint64_t imageBase) const;
+  void applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
+                   uint64_t p, uint64_t imageBase) const;
   void applyRelARM(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
                    uint64_t p, uint64_t imageBase) const;
   void applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,

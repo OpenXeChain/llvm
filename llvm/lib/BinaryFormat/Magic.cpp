@@ -212,6 +212,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
 
   case 0x4c: // 80386 Windows
   case 0xc4: // ARMNT Windows
+  case 0xF2: // Xbox 360
     if (Magic[1] == 0x01)
       return file_magic::coff_object;
     [[fallthrough]];

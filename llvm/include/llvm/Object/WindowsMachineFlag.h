@@ -45,6 +45,8 @@ template <typename T> Triple::ArchType getMachineArchType(T machine) {
     return llvm::Triple::ArchType::aarch64;
   case COFF::IMAGE_FILE_MACHINE_R4000:
     return llvm::Triple::ArchType::mipsel;
+  case COFF::IMAGE_FILE_MACHINE_XBOX360:
+    return llvm::Triple::ArchType::ppc;
   default:
     return llvm::Triple::ArchType::UnknownArch;
   }
