@@ -158,26 +158,61 @@ void SectionChunk::applyRelX86(uint8_t *off, uint16_t type, OutputSection *os,
   }
 }
 
+uint32_t encodeBLOffset(uint32_t originalInstruction, int32_t newOffset) {
+  if (newOffset < -0x02000000 || newOffset > 0x01FFFFFC) {
+    llvm_unreachable("Offset out of range for BL instruction");
+  }
+  uint32_t newInstruction = originalInstruction & 0xFC000003;
+  newInstruction |= (newOffset & 0x03FFFFFC);
 
+  return newInstruction;
+}
+
+void applyRelPPC_REL24(uint8_t *off, uint64_t instructionAddress,
+                       uint64_t targetAddress) {
+  int32_t displacement = static_cast<int32_t>(targetAddress) -
+                           static_cast<int32_t>(instructionAddress);
+
+  uint32_t instr = read32be(off);
+
+  instr = encodeBLOffset(instr, displacement);
+
+  write32be(off, instr);
+}
+
+uint64_t lastPairValue = 0;
 void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
                                uint64_t s, uint64_t p,
                                uint64_t imageBase) const {
+
   switch (type) {
-  case IMAGE_REL_PPC_REFHI: {
-   
+  case IMAGE_REL_PPC_ABSOLUTE: {
     break;
-  }
-  case IMAGE_REL_PPC_PAIR: {
-    
+  }    
+  case IMAGE_REL_PPC_REFHI: {
+    s += imageBase;
+    write16be(off + 2, (s + 0x8000) >> 16); 
+    lastPairValue = 0;
     break;
   }
   case IMAGE_REL_PPC_REFLO: {
-
+    s += imageBase;
+    write16be(off + 2, s & 0xFFFF); 
+    lastPairValue = 0;
     break;
   }
+  case IMAGE_REL_PPC_PAIR: {
+    lastPairValue = read16be(off + 2);
+    break;
+  }
+
+  case IMAGE_REL_PPC_REL24: {
+    applyRelPPC_REL24(off, p, s);
+    break;
+  }
+
   default:
     llvm_unreachable("lld: Unimplemented reloc type for ppc32 PE");
-    break;
   }
 }
 

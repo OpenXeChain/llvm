@@ -73,11 +73,10 @@ unsigned PPCCOFFObjectWriter::getRelocType(MCContext &Ctx,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
 
-  MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
+    MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
 
-  unsigned Type = 0;
-  bool IsPCRel = false;
-  if (IsPCRel) {
+    unsigned Type = 0;
+
     switch (Fixup.getTargetKind()) {
     default:
       llvm_unreachable("Unimplemented");
@@ -159,128 +158,7 @@ unsigned PPCCOFFObjectWriter::getRelocType(MCContext &Ctx,
       Type = COFF::IMAGE_REL_PPC_ADDR64; // 64-bit address
       break;
     }
-  } else {
-    switch (Fixup.getTargetKind()) {
-    default:
-      llvm_unreachable("invalid fixup kind!");
-    case PPC::fixup_ppc_br24abs:
-      Type = COFF::IMAGE_REL_PPC_ADDR24; // 26-bit absolute address
-      break;
-    case PPC::fixup_ppc_brcond14abs:
-      Type = COFF::IMAGE_REL_PPC_ADDR14; // 16-bit shifted left 2
-      break;
-    case PPC::fixup_ppc_half16:
-      switch (Modifier) {
-      default:
-        llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = COFF::IMAGE_REL_PPC_ADDR16;
-        break;
-      case MCSymbolRefExpr::VK_PPC_LO:
-        Type = COFF::IMAGE_REL_PPC_REFLO;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HI:
-        Type = COFF::IMAGE_REL_PPC_REFHI;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HA:
-        Type = COFF::IMAGE_REL_PPC_REFHI; // no separate HA in COFF, use HI
-        break;
-        // Other high modifiers not available in COFF
-      }
-      break;
 
-    case PPC::fixup_ppc_half16ds:
-    case PPC::fixup_ppc_half16dq:
-      switch (Modifier) {
-      default:
-        llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = COFF::IMAGE_REL_PPC_ADDR16; // No DS in COFF, fallback
-        break;
-      case MCSymbolRefExpr::VK_PPC_LO:
-        Type = COFF::IMAGE_REL_PPC_REFLO;
-        break;
-      case MCSymbolRefExpr::VK_GOT:
-        Type = COFF::IMAGE_REL_PPC_TOCREL16; // GOT approx TOC relative
-        break;
-      case MCSymbolRefExpr::VK_PPC_GOT_LO:
-        Type = COFF::IMAGE_REL_PPC_TOCREL16; // Approximate
-        break;
-      case MCSymbolRefExpr::VK_PPC_TOC:
-        Type = COFF::IMAGE_REL_PPC_TOCREL16;
-        break;
-      case MCSymbolRefExpr::VK_PPC_TOC_LO:
-        Type = COFF::IMAGE_REL_PPC_TOCREL16;
-        break;
-      case MCSymbolRefExpr::VK_TPREL:
-        Type = COFF::IMAGE_REL_PPC_SECREL16; // Section relative 16-bit
-        break;
-      case MCSymbolRefExpr::VK_PPC_TPREL_LO:
-        Type = COFF::IMAGE_REL_PPC_SECRELLO; // Low 16 bit section relative
-        break;
-      case MCSymbolRefExpr::VK_DTPREL:
-        Type = COFF::IMAGE_REL_PPC_SECREL16; // Approximate TLS section relative
-        break;
-      case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
-        Type = COFF::IMAGE_REL_PPC_SECRELLO;
-        break;
-        // Other modifiers can be approximated similarly
-      }
-      break;
-
-    case PPC::fixup_ppc_nofixup:
-      switch (Modifier) {
-      default:
-        llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_PPC_TLSGD:
-      case MCSymbolRefExpr::VK_PPC_TLSLD:
-      case MCSymbolRefExpr::VK_PPC_TLS:
-      case MCSymbolRefExpr::VK_PPC_TLS_PCREL:
-        Type =
-            COFF::IMAGE_REL_PPC_SECREL; // Section relative as TLS approximation
-        break;
-      }
-      break;
-
-    case PPC::fixup_ppc_imm34:
-      switch (Modifier) {
-      default:
-        report_fatal_error("Unsupported Modifier for fixup_ppc_imm34.");
-      case MCSymbolRefExpr::VK_DTPREL:
-      case MCSymbolRefExpr::VK_TPREL:
-        Type = COFF::IMAGE_REL_PPC_ADDR64; // Use 64-bit address for 34-bit
-                                           // immediate
-        break;
-      }
-      break;
-
-    case FK_Data_8:
-      switch (Modifier) {
-      default:
-        Type = COFF::IMAGE_REL_PPC_ADDR64;
-        break;
-      case MCSymbolRefExpr::VK_PPC_TOCBASE:
-        Type =
-            COFF::IMAGE_REL_PPC_TOCREL16; // TOC base approximated as TOCREL16
-        break;
-      }
-      break;
-
-    case FK_Data_4:
-      switch (Modifier) {
-      case MCSymbolRefExpr::VK_DTPREL:
-        Type = COFF::IMAGE_REL_PPC_SECREL; // Section relative
-        break;
-      default:
-        Type = COFF::IMAGE_REL_PPC_ADDR32;
-      }
-      break;
-
-    case FK_Data_2:
-      Type = COFF::IMAGE_REL_PPC_ADDR16;
-      break;
-    }
-  }
 
   return Type;
 }
