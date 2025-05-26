@@ -159,9 +159,9 @@ void SectionChunk::applyRelX86(uint8_t *off, uint16_t type, OutputSection *os,
 }
 
 uint32_t encodeBLOffset(uint32_t originalInstruction, int32_t newOffset) {
-  if (newOffset < -0x02000000 || newOffset > 0x01FFFFFC) {
-    llvm_unreachable("Offset out of range for BL instruction");
-  }
+  if (!isInt<24>(newOffset))
+    error("PPC32 BL relocation doesnt fit into 24 bit range!");
+
   uint32_t newInstruction = originalInstruction & 0xFC000003;
   newInstruction |= (newOffset & 0x03FFFFFC);
 
