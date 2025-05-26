@@ -62,6 +62,10 @@ static unsigned computeLinkageSize(const PPCSubtarget &STI) {
   if (STI.isAIXABI() || STI.isPPC64())
     return (STI.isELFv2ABI() ? 4 : 6) * (STI.isPPC64() ? 8 : 4);
 
+  // MSVC for xbox 360 uses a minimum of 0x60 as the stack frame, So we should stick to that to avoid stack corruption
+  if (STI.getTargetTriple().isXbox360())
+    return 0x60;
+
   // 32-bit SVR4 ABI:
   return 8;
 }
