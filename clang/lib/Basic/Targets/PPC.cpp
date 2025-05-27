@@ -108,6 +108,9 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (getTriple().isXbox360()) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedShort;
+    LongDoubleWidth = 64;
+    LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   }
 
   return true;
