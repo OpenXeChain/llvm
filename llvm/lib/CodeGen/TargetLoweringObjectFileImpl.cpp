@@ -2081,8 +2081,11 @@ static std::string scalarConstantToHexString(const Constant *C) {
 MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     Align &Alignment) const {
+
+  // TODO xbox360: this breaks float deduplication
   if (Kind.isMergeableConst() && C &&
-      getContext().getAsmInfo()->hasCOFFComdatConstants()) {
+      getContext().getAsmInfo()->hasCOFFComdatConstants() &&
+      !getContext().getTargetTriple().isXbox360()) {
     // This creates comdat sections with the given symbol name, but unless
     // AsmPrinter::GetCPISymbol actually makes the symbol global, the symbol
     // will be created with a null storage class, which makes GNU binutils
