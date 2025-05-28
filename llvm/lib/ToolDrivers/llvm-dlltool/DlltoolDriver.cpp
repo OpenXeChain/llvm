@@ -81,6 +81,7 @@ MachineTypes getEmulation(StringRef S) {
       .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
       .Case("arm64ec", IMAGE_FILE_MACHINE_ARM64EC)
       .Case("r4000", IMAGE_FILE_MACHINE_R4000)
+      .Case("xbox360", IMAGE_FILE_MACHINE_XBOX360)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 

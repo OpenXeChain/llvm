@@ -1358,4 +1358,11 @@ void DynamicRelocsChunk::writeTo(uint8_t *buf) const {
   assert(size == sizeof(*table) + sizeof(*header) + relocSize);
 }
 
-} // namespace lld::coff
+void ImportThunkChunkPPC::writeTo(uint8_t *buf) const {
+  uint32_t address = impSymbol->getRVA() + ctx.config.imageBase;
+  memcpy(buf, importThunkPPC, sizeof(importThunkPPC));
+  write16be(buf + 2, (address + 0x8000) >> 16); 
+  write16be(buf + 6, address & 0xFFFF);
+}
+
+} 

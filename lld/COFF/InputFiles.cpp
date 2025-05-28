@@ -1154,6 +1154,8 @@ ImportThunkChunk *ImportFile::makeImportThunk() {
     return make<ImportThunkChunkARM64>(symtab.ctx, impSym, ARM64);
   case ARMNT:
     return make<ImportThunkChunkARM>(symtab.ctx, impSym);
+  case XBOX360:
+    return make<ImportThunkChunkPPC>(symtab.ctx, impSym);
   }
   llvm_unreachable("unknown machine type");
 }

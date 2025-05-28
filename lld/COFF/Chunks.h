@@ -547,6 +547,13 @@ static const uint8_t importThunkARM[] = {
     0xdc, 0xf8, 0x00, 0xf0, // ldr.w pc, [ip]
 };
 
+static const uint8_t importThunkPPC[] = {
+    0x3D, 0x60, 0x00, 0x00, // lis r11, 0x0
+    0x81, 0x6B, 0x00, 0x00, // lwz r11, 0
+    0x7D, 0x69, 0x03, 0xA6, // mtctr r11
+    0x4E, 0x80, 0x04, 0x20, // bctr
+};
+
 static const uint8_t importThunkARM64[] = {
     0x10, 0x00, 0x00, 0x90, // adrp x16, #0
     0x10, 0x02, 0x40, 0xf9, // ldr  x16, [x16]
@@ -606,6 +613,15 @@ public:
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
   MachineTypes getMachine() const override { return ARMNT; }
+};
+
+class ImportThunkChunkPPC : public ImportThunkChunk {
+public:
+  explicit ImportThunkChunkPPC(COFFLinkerContext &ctx, Defined *s)
+      : ImportThunkChunk(ctx, s) {};
+  size_t getSize() const override { return sizeof(importThunkPPC); }
+  void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return XBOX360; }
 };
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
