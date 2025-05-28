@@ -324,6 +324,19 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__powerpc");
   }
 
+  if (getTriple().isXbox360()) {
+    Builder.defineMacro("_M_PPC", "5401");
+    Builder.defineMacro("_M_PPCBE");
+    Builder.defineMacro("_XBOX_VER", "200");
+    Builder.defineMacro("__VMX128_SUPPORTED", "1");
+    Builder.defineMacro("__XBOX_CPU_DD2", "1");
+    Builder.defineMacro("_MSC_VER", "2000");
+    Builder.defineMacro("_MSC_FULL_VER", "200030159");
+    Builder.defineMacro("_WIN32", "1");
+    Builder.defineMacro("_XBOX", "1");
+    Builder.defineMacro("_PPC_");
+  }
+
   // Target properties.
   if (getTriple().getArch() == llvm::Triple::ppc64le ||
       getTriple().getArch() == llvm::Triple::ppcle) {
