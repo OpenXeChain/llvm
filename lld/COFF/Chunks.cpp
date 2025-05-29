@@ -190,19 +190,21 @@ void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
     break;
   }    
   case IMAGE_REL_PPC_REFHI: {
-    s += imageBase;
-    write16be(off + 2, (s + 0x8000) >> 16); 
+    write16be(off + 2, (s + imageBase + 0x8000) >> 16); 
     lastPairValue = 0;
     break;
   }
   case IMAGE_REL_PPC_REFLO: {
-    s += imageBase;
-    write16be(off + 2, s & 0xFFFF); 
+    write16be(off + 2, (s + imageBase) & 0xFFFF); 
     lastPairValue = 0;
     break;
   }
   case IMAGE_REL_PPC_PAIR: {
     lastPairValue = read16be(off + 2);
+    break;
+  }
+  case IMAGE_REL_PPC_ADDR32: {
+    write32be(off, s + imageBase);
     break;
   }
 
@@ -212,7 +214,8 @@ void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
   }
 
   default:
-    llvm_unreachable("lld: Unimplemented reloc type for ppc32 PE");
+    printf("lld: Unimplemented reloc type for ppc32 PE %d\n", type);
+    ///llvm_unreachable("lld: Unimplemented reloc type for ppc32 PE");
   }
 }
 
