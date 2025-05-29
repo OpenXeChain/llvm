@@ -72,6 +72,7 @@ static void add64(uint8_t *p, int64_t v) { write64le(p, read64le(p) + v); }
 static void or16(uint8_t *p, uint16_t v) { write16le(p, read16le(p) | v); }
 static void or32(uint8_t *p, uint32_t v) { write32le(p, read32le(p) | v); }
 
+static void add32be(uint8_t *p, int32_t v) { write32be(p, read32be(p) + v); }
 // Verify that given sections are appropriate targets for SECREL
 // relocations. This check is relaxed because unfortunately debug
 // sections have section-relative relocations against absolute symbols.
@@ -204,7 +205,7 @@ void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
     break;
   }
   case IMAGE_REL_PPC_ADDR32: {
-    write32be(off, s + imageBase);
+    add32be(off, s + imageBase);
     break;
   }
 
