@@ -27,11 +27,12 @@ using namespace llvm;
 static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   switch (Kind) {
   default:
-    llvm_unreachable("Unknown fixup kind!");
+    llvm_unreachable(std::string("Unknown fixup kind! " + std::to_string(Kind)).c_str());
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_SecRel_4:
   case PPC::fixup_ppc_nofixup:
     return Value;
   case PPC::fixup_ppc_brcond14:
@@ -64,6 +65,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case PPC::fixup_ppc_half16dq:
     return 2;
   case FK_Data_4:
+  case FK_SecRel_4:
   case PPC::fixup_ppc_brcond14:
   case PPC::fixup_ppc_brcond14abs:
   case PPC::fixup_ppc_br24:

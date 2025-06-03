@@ -14,6 +14,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
+#include <clang/Basic/NoSanitizeList.h>
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -296,4 +297,103 @@ Tool *CrossWindowsToolChain::buildLinker() const {
 
 Tool *CrossWindowsToolChain::buildAssembler() const {
   return new tools::CrossWindows::Assembler(*this);
+}
+
+clang::driver::toolchains::CrossXbox360ToolChain::CrossXbox360ToolChain(
+    const Driver &D, const llvm::Triple &T, const llvm::opt::ArgList &Args)
+    : Generic_GCC(D, T, Args) {}
+
+
+clang::driver::ToolChain::UnwindTableLevel clang::driver::toolchains::CrossXbox360ToolChain::getDefaultUnwindTableLevel(
+    const llvm::opt::ArgList &Args) const {
+  return UnwindTableLevel::None;
+}
+
+bool clang::driver::toolchains::CrossXbox360ToolChain::isPICDefault() const {
+  return false;
+}
+
+bool clang::driver::toolchains::CrossXbox360ToolChain::isPIEDefault(
+    const llvm::opt::ArgList &Args) const {
+  return false;
+}
+
+bool clang::driver::toolchains::CrossXbox360ToolChain::isPICDefaultForced()
+    const {
+  return false;
+}
+
+void clang::driver::toolchains::CrossXbox360ToolChain::
+    AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const {}
+
+void clang::driver::toolchains::CrossXbox360ToolChain::
+    AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                 llvm::opt::ArgStringList &CC1Args) const {}
+
+void clang::driver::toolchains::CrossXbox360ToolChain::AddCXXStdlibLibArgs(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const {}
+
+clang::SanitizerMask clang::driver::toolchains::CrossXbox360ToolChain::getSupportedSanitizers()
+    const {
+  return SanitizerMask();
+}
+
+Tool *clang::driver::toolchains::CrossXbox360ToolChain::buildLinker() const {
+  return new tools::CrossXbox360::Linker(*this);
+}
+
+Tool *clang::driver::toolchains::CrossXbox360ToolChain::buildAssembler() const {
+  return new tools::CrossXbox360::Assembler(*this);
+}
+
+void tools::CrossXbox360::Assembler::ConstructJob(
+    Compilation &C, const JobAction &JA, const InputInfo &Output,
+    const InputInfoList &Inputs, const ArgList &Args,
+    const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+  const auto &TC =
+      static_cast<const toolchains::CrossWindowsToolChain &>(getToolChain());
+  const std::string Assembler = TC.GetProgramPath("as");
+  const char* Exec = Args.MakeArgString(Assembler);
+
+  CmdArgs.push_back("-mppc");
+   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
+
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  for (const auto &Input : Inputs)
+    CmdArgs.push_back(Input.getFilename());
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
+void tools::CrossXbox360::Linker::ConstructJob(
+    Compilation &C, const JobAction &JA, const InputInfo &Output,
+    const InputInfoList &Inputs, const ArgList &Args,
+    const char *LinkingOutput) const {
+  const auto &TC =
+      static_cast<const toolchains::CrossWindowsToolChain &>(getToolChain());
+  const llvm::Triple &T = TC.getTriple();
+  const Driver &D = TC.getDriver();
+  SmallString<128> EntryPoint;
+  ArgStringList CmdArgs;
+
+
+    CmdArgs.push_back("/SUBSYSTEM:xbox360");
+  CmdArgs.push_back("/FIXED");
+    CmdArgs.push_back("/BASE:0x90F00000");
+  CmdArgs.push_back("/ENTRY:_start");
+    CmdArgs.push_back("/dll");
+  CmdArgs.push_back(Args.MakeArgString("/OUT:" + std::string(Output.getFilename())));
+
+
+
+  const char* Exec = Args.MakeArgString(TC.GetProgramPath("lld-link"));
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
+ 
 }
