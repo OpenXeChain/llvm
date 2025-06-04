@@ -211,7 +211,7 @@ macro(test_targets)
     set(COMPILER_RT_OS_SUFFIX "-android")
   elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
     if(COMPILER_RT_DEFAULT_TARGET_ONLY)
-      add_default_target_arch(${COMPILER_RT_DEFAULT_TARGET_ARCH})
+      add_default_target_arch(powerpc)
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "i[2-6]86|x86|amd64")
       if(NOT MSVC)
         test_target_arch(x86_64 "" "-m64")

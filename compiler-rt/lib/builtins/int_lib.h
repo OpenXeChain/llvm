@@ -67,7 +67,8 @@
 #elif defined(_WIN32)
 #define COMPILER_RT_ALIAS(name, aliasname)
 #else
-#error Unsupported target
+#define COMPILER_RT_ALIAS(name, aliasname)
+//#error Unsupported target
 #endif
 
 #if (defined(__FreeBSD__) || defined(__NetBSD__)) &&                           \

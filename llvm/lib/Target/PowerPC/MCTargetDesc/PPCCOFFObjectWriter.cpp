@@ -80,9 +80,6 @@ unsigned PPCCOFFObjectWriter::getRelocType(MCContext &Ctx,
     switch (Fixup.getTargetKind()) {
     default:
       llvm_unreachable(std::string("Unimplemented PPC32 COFF fixup kind " + std::to_string(Fixup.getTargetKind())).c_str());
-    case FK_SecRel_4:
-        Type = COFF::IMAGE_REL_PPC_SECREL; 
-        break;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
     case PPC::fixup_ppc_br24_notoc:
