@@ -370,30 +370,25 @@ void tools::CrossXbox360::Assembler::ConstructJob(
 }
 
 void tools::CrossXbox360::Linker::ConstructJob(
-    Compilation &C, const JobAction &JA, const InputInfo &Output,
-    const InputInfoList &Inputs, const ArgList &Args,
-    const char *LinkingOutput) const {
-  const auto &TC =
-      static_cast<const toolchains::CrossWindowsToolChain &>(getToolChain());
-  const llvm::Triple &T = TC.getTriple();
-  const Driver &D = TC.getDriver();
-  SmallString<128> EntryPoint;
-  ArgStringList CmdArgs;
-
+  Compilation &C, const JobAction &JA, const InputInfo &Output,
+  const InputInfoList &Inputs, const ArgList &Args,
+  const char *LinkingOutput) const {
+    const auto &TC =
+        static_cast<const toolchains::CrossWindowsToolChain &>(getToolChain());
+    const llvm::Triple &T = TC.getTriple();
+    const Driver &D = TC.getDriver();
+    SmallString<128> EntryPoint;
+    ArgStringList CmdArgs;
 
     CmdArgs.push_back("/SUBSYSTEM:xbox360");
-  CmdArgs.push_back("/FIXED");
-    CmdArgs.push_back("/BASE:0x90F00000");
-  CmdArgs.push_back("/ENTRY:_start");
-    CmdArgs.push_back("/dll");
-  CmdArgs.push_back(Args.MakeArgString("/OUT:" + std::string(Output.getFilename())));
+    CmdArgs.push_back("/FIXED");
+    CmdArgs.push_back("/BASE:0x82000000");
+    CmdArgs.push_back("/ENTRY:_start");
+    CmdArgs.push_back(Args.MakeArgString("/OUT:" + std::string(Output.getFilename())));
 
-
-
-  const char* Exec = Args.MakeArgString(TC.GetProgramPath("lld-link"));
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileUTF8(),
-                                         Exec, CmdArgs, Inputs, Output));
- 
+    const char* Exec = Args.MakeArgString(TC.GetProgramPath("lld-link"));
+    AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+    C.addCommand(std::make_unique<Command>(JA, *this,
+                                           ResponseFileSupport::AtFileUTF8(),
+                                           Exec, CmdArgs, Inputs, Output)); 
 }
