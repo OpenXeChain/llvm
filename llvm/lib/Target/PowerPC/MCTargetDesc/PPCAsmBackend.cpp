@@ -32,6 +32,7 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_SecRel_4:
   case PPC::fixup_ppc_nofixup:
     return Value;
   case PPC::fixup_ppc_brcond14:

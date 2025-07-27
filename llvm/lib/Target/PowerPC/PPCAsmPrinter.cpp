@@ -341,9 +341,6 @@ public:
 
   StringRef getPassName() const override { return "Xbox 360 PPC Assembly Printer"; }
 
-  void emitXXStructorList(const DataLayout &DL, const Constant *List,
-                          bool IsCtor) override;
-
   void SetupMachineFunction(MachineFunction &MF) override;
 
   void emitFunctionEntryLabel() override;
@@ -3514,29 +3511,6 @@ bool PPCXbox360AsmPrinter::doFinalization(Module &M) {
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
   return PPCAsmPrinter::doFinalization(M);
-}
-
-void PPCXbox360AsmPrinter::emitXXStructorList(const DataLayout &DL,
-                                              const Constant *List,
-                                              bool IsCtor) {
-  SmallVector<Structor, 8> Structors;
-  preprocessXXStructorList(DL, List, Structors);
-  if (Structors.empty())
-    return;
-
-  unsigned Index = 0;
-  for (Structor &S : Structors) {
-    if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(S.Func))
-      S.Func = CE->getOperand(0);
-
-    llvm::GlobalAlias::create(
-        GlobalValue::ExternalLinkage,
-        (IsCtor ? llvm::Twine("__sinit") : llvm::Twine("__sterm")) +
-            llvm::Twine(convertToSinitPriority(S.Priority)) +
-            llvm::Twine("_", FormatIndicatorAndUniqueModId) +
-            llvm::Twine("_", llvm::utostr(Index++)),
-        cast<Function>(S.Func));
-  }
 }
 
 void PPCXbox360AsmPrinter::emitTTypeReference(const GlobalValue *GV,

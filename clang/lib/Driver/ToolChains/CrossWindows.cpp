@@ -383,7 +383,7 @@ void tools::CrossXbox360::Linker::ConstructJob(
 
     CmdArgs.push_back("/SUBSYSTEM:xbox360");
   CmdArgs.push_back("/FIXED");
-    CmdArgs.push_back("/BASE:0x90F00000");
+    CmdArgs.push_back("/BASE:0x90B00000");
   CmdArgs.push_back("/ENTRY:_start");
     CmdArgs.push_back("/dll");
   CmdArgs.push_back(Args.MakeArgString("/OUT:" + std::string(Output.getFilename())));

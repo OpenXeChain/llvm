@@ -3070,7 +3070,7 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
 /// special global used by LLVM.  If so, emit it and return true, otherwise
 /// do nothing and return false.
 bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
-  if (GV->getName() == "llvm.used") {
+    if (GV->getName() == "llvm.used") {
     if (MAI->hasNoDeadStrip())    // No need to emit this at all.
       emitLLVMUsedList(cast<ConstantArray>(GV->getInitializer()));
     return true;

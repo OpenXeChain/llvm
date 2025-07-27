@@ -135,6 +135,10 @@ template <typename T> bool is64Bit(T Machine) {
   return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine);
 }
 
+template <typename T> bool isXbox360(T Machine) {
+  return Machine == IMAGE_FILE_MACHINE_XBOX360;
+}
+
 enum Characteristics : unsigned {
   C_Invalid = 0,
 

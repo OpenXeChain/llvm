@@ -150,6 +150,7 @@ unsigned PPCCOFFObjectWriter::getRelocType(MCContext &Ctx,
 
     case FK_Data_4:
     case FK_PCRel_4:
+    case FK_SecRel_4:
       Type = COFF::IMAGE_REL_PPC_ADDR32; // 32-bit address
       break;
 

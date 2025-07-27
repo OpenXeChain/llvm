@@ -1242,7 +1242,7 @@ void Writer::createMiscChunks() {
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
-  if (config->mingw)
+  if (config->mingw || isXbox360(ctx.config.machine))
     insertCtorDtorSymbols();
 }
 

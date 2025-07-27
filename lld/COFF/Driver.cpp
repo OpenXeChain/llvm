@@ -2200,6 +2200,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
+
+  if (isXbox360(config->machine)) {
+    parseMerge(".ctors=.rdata");
+    parseMerge(".dtors=.rdata");
+  }
+
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
   if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN) {
@@ -2471,7 +2477,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       symtab.addAbsolute(symtab.mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
       symtab.addAbsolute(symtab.mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
     }
-    if (config->mingw) {
+
+    if (config->mingw || isXbox360(ctx.config.machine)) {
       symtab.addAbsolute(symtab.mangle("__CTOR_LIST__"), 0);
       symtab.addAbsolute(symtab.mangle("__DTOR_LIST__"), 0);
     }
