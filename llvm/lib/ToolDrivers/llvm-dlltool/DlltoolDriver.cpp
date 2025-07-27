@@ -317,7 +317,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     Table.printHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
                     false);
     llvm::outs()
-        << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000\n";
+        << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000, xbox 360\n";
     return 1;
   }
 
