@@ -380,16 +380,12 @@ void tools::CrossXbox360::Linker::ConstructJob(
   SmallString<128> EntryPoint;
   ArgStringList CmdArgs;
 
-
-    CmdArgs.push_back("/SUBSYSTEM:xbox360");
+  CmdArgs.push_back("/SUBSYSTEM:xbox360");
   CmdArgs.push_back("/FIXED");
-    CmdArgs.push_back("/BASE:0x90B00000");
-  CmdArgs.push_back("/ENTRY:_start");
-    CmdArgs.push_back("/dll");
+  CmdArgs.push_back("/BASE:0x82000000");
   CmdArgs.push_back("/ALIGN:0x10000");
+  CmdArgs.push_back("/ENTRY:_start");
   CmdArgs.push_back(Args.MakeArgString("/OUT:" + std::string(Output.getFilename())));
-
-
 
   const char* Exec = Args.MakeArgString(TC.GetProgramPath("lld-link"));
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
