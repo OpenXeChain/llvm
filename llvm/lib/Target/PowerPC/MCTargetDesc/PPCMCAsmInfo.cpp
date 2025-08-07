@@ -79,12 +79,19 @@ void PPCCOFFMCAsmInfo::anchor() {}
 PPCCOFFMCAsmInfo::PPCCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   if (T.getArch() != Triple::ppc)
     report_fatal_error("COFF is not supported for non ppc32 targets");
-  CodePointerSize = CalleeSaveStackSlotSize = Is64Bit ? 8 : 4;
+
+  if (T.isXbox360()) {
+    CodePointerSize = Is64Bit ? 8 : 4;
+    CalleeSaveStackSlotSize = 8;
+    Data64bitsDirective = "\t.vbyte\t8, ";
+  } else {
+    CodePointerSize = CalleeSaveStackSlotSize = Is64Bit ? 8 : 4;
+
+    // A size of 8 is only supported by the assembler under 64-bit.
+    Data64bitsDirective = Is64Bit ? "\t.vbyte\t8, " : nullptr;
+  }
 
   IsLittleEndian = false;
-
-  // A size of 8 is only supported by the assembler under 64-bit.
-  Data64bitsDirective = Is64Bit ? "\t.vbyte\t8, " : nullptr;
 
   // Debug Information
   SupportsDebugInformation = true;

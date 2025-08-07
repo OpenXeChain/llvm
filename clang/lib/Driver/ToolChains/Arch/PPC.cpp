@@ -42,6 +42,13 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
     Features.push_back("+spe");
 
+  // Xbox 360 is 64-bit CPU with 32-bit pointers
+  // Enable the 64-bit features
+  if (Triple.isXbox360()) {
+    Features.push_back("+64bit");
+    Features.push_back("+64bitregs");
+  }
+
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_ppc_Features_Group);
 

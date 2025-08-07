@@ -357,7 +357,8 @@ void tools::CrossXbox360::Assembler::ConstructJob(
   const std::string Assembler = TC.GetProgramPath("as");
   const char* Exec = Args.MakeArgString(Assembler);
 
-  CmdArgs.push_back("-mppc");
+  CmdArgs.push_back("-mppc64");
+  CmdArgs.push_back("-a32");
    Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
 
   CmdArgs.push_back("-o");
