@@ -41,36 +41,49 @@ EnablePEVectorSpills("ppc-enable-pe-vector-spills",
                      cl::init(false), cl::Hidden);
 
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
-  if (STI.isAIXABI())
+  if (STI.getTargetTriple().isXbox360())
+    return -12U;
+  else if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
   // SVR4 ABI:
   return STI.isPPC64() ? 16 : 4;
 }
 
 static unsigned computeTOCSaveOffset(const PPCSubtarget &STI) {
-  if (STI.isAIXABI())
+  // I don't think the 360 has a dedicated place for this.
+  // Just put it in an unused area.
+  if(STI.getTargetTriple().isXbox360())
+    return -8U;
+  else if (STI.isAIXABI())
     return STI.isPPC64() ? 40 : 20;
   return STI.isELFv2ABI() ? 24 : 40;
 }
 
 static unsigned computeFramePointerSaveOffset(const PPCSubtarget &STI) {
+  if (STI.getTargetTriple().isXbox360())
+    return -4U; // Maybe?
+
   // First slot in the general register save area.
   return STI.isPPC64() ? -8U : -4U;
 }
 
 static unsigned computeLinkageSize(const PPCSubtarget &STI) {
-  if (STI.isAIXABI() || STI.isPPC64())
-    return (STI.isELFv2ABI() ? 4 : 6) * (STI.isPPC64() ? 8 : 4);
-
-  // MSVC for xbox 360 uses a minimum of 0x60 as the stack frame, So we should stick to that to avoid stack corruption
+  // MSVC for Xbox 360 uses a minimum of 0x60 as the stack frame,
+  // so we should stick to that to avoid stack corruption.
   if (STI.getTargetTriple().isXbox360())
     return 0x60;
+  if (STI.isAIXABI() || STI.isPPC64())
+    return (STI.isELFv2ABI() ? 4 : 6) * (STI.isPPC64() ? 8 : 4);
 
   // 32-bit SVR4 ABI:
   return 8;
 }
 
 static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
+  // For the Xbox 360, the base pointer is at +4 from the end of the frame.
+  if(STI.getTargetTriple().isXbox360())
+    return 4;
+
   // Third slot in the general purpose register save area.
   if (STI.is32BitELFABI() && STI.getTargetMachine().isPositionIndependent())
     return -12U;
@@ -80,6 +93,9 @@ static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
 }
 
 static unsigned computeCRSaveOffset(const PPCSubtarget &STI) {
+  // The Xbox 360 does not seem to save the CR. Put it somewhere unused.
+  if(STI.getTargetTriple().isXbox360())
+    return 8;
   return (STI.isAIXABI() && !STI.isPPC64()) ? 4 : 8;
 }
 
@@ -231,6 +247,17 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
 
   static const SpillSlot AIXOffsets64[] = {
       CALLEE_SAVED_FPRS, CALLEE_SAVED_GPRS64, CALLEE_SAVED_VRS};
+
+  static const SpillSlot Xbox360Offsets[] = {
+      CALLEE_SAVED_GPRS64,
+      CALLEE_SAVED_FPRS,
+      CALLEE_SAVED_VRS
+  };
+
+  if (Subtarget.getTargetTriple().isXbox360()) {
+    NumEntries = std::size(Xbox360Offsets);
+    return Xbox360Offsets;
+  }
 
   if (Subtarget.is64BitELFABI()) {
     NumEntries = std::size(ELFOffsets64);

@@ -4237,6 +4237,9 @@ SDValue PPCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+  if (Subtarget.getTargetTriple().isXbox360())
+    return LowerFormalArguments_64SVR4(Chain, CallConv, isVarArg, Ins, dl, DAG,
+                                       InVals);
   if (Subtarget.isAIXABI())
     return LowerFormalArguments_AIX(Chain, CallConv, isVarArg, Ins, dl, DAG,
                                     InVals);
