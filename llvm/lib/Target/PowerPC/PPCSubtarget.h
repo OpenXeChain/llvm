@@ -217,6 +217,7 @@ public:
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 
   bool isAIXABI() const { return TargetTriple.isOSAIX(); }
+  bool isXboxABI() const { return TargetTriple.isXbox360(); }
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
 

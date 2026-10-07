@@ -440,6 +440,8 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
+    if (getTriple().isXbox360())
+      return TargetInfo::CharPtrBuiltinVaList;
     // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
   }
