@@ -86,7 +86,8 @@ static bool checkSecRel(const SectionChunk *sec, OutputSection *os) {
 }
 
 static void applySecRel(const SectionChunk *sec, uint8_t *off,
-                        OutputSection *os, uint64_t s) {
+                        OutputSection *os, uint64_t s,
+                        endianness endian = endianness::little) {
   if (!checkSecRel(sec, os))
     return;
   uint64_t secRel = s - os->getRVA();
@@ -94,7 +95,7 @@ static void applySecRel(const SectionChunk *sec, uint8_t *off,
     error("overflow in SECREL relocation in section: " + sec->getSectionName());
     return;
   }
-  add32(off, secRel);
+  write32(off, read32(off, endian) + secRel, endian);
 }
 
 static void applySecIdx(uint8_t *off, OutputSection *os,
@@ -206,6 +207,10 @@ void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
   }
   case IMAGE_REL_PPC_ADDR32: {
     add32be(off, s + imageBase);
+    break;
+  }
+  case IMAGE_REL_PPC_SECREL: {
+    applySecRel(this, off, os, s, endianness::big);
     break;
   }
 

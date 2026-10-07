@@ -595,6 +595,22 @@ static uint64_t resolveLoongArch(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsCOFFPPC32(uint64_t Type) {
+  return Type == COFF::IMAGE_REL_PPC_ADDR32 ||
+         Type == COFF::IMAGE_REL_PPC_SECREL;
+}
+
+static uint64_t resolveCOFFPPC32(uint64_t Type, uint64_t Offset, uint64_t S,
+                               uint64_t LocData, int64_t /*Addend*/) {
+  switch (Type) {
+  case COFF::IMAGE_REL_PPC_ADDR32:
+  case COFF::IMAGE_REL_PPC_SECREL:
+    return (S + LocData) & 0xFFFFFFFF;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsCOFFX86(uint64_t Type) {
   switch (Type) {
   case COFF::IMAGE_REL_I386_SECREL:
@@ -772,6 +788,8 @@ std::pair<SupportsRelocation, RelocationResolver>
 getRelocationResolver(const ObjectFile &Obj) {
   if (Obj.isCOFF()) {
     switch (Obj.getArch()) {
+    case Triple::ppc:
+      return {supportsCOFFPPC32, resolveCOFFPPC32};
     case Triple::x86_64:
       return {supportsCOFFX86_64, resolveCOFFX86_64};
     case Triple::x86:

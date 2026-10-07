@@ -65,6 +65,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case PPC::fixup_ppc_half16dq:
     return 2;
   case FK_Data_4:
+  case FK_SecRel_4:
   case PPC::fixup_ppc_brcond14:
   case PPC::fixup_ppc_brcond14abs:
   case PPC::fixup_ppc_br24:
