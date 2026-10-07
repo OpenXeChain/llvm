@@ -126,8 +126,18 @@ unsigned PPCCOFFObjectWriter::getRelocType(MCContext &Ctx,
       break;
 
     case PPC::fixup_ppc_half16ds:
+      if (Modifier != MCSymbolRefExpr::VK_None &&
+          Modifier != MCSymbolRefExpr::VK_PPC_LO) {
+        Ctx.reportError(Fixup.getLoc(), "unsupported PowerPC COFF DS modifier");
+        return COFF::IMAGE_REL_PPC_ABSOLUTE;
+      }
+      // DS-form displacements occupy bits 2..15. ADDR14 has that same
+      // field layout; the linker must retain the low opcode/update bits.
+      Type = COFF::IMAGE_REL_PPC_ADDR14;
+      break;
     case PPC::fixup_ppc_half16dq:
-      llvm_unreachable("Invalid PC-relative half16ds relocation");
+      Ctx.reportError(Fixup.getLoc(), "unsupported PowerPC COFF DQ relocation");
+      return COFF::IMAGE_REL_PPC_ABSOLUTE;
 
     case PPC::fixup_ppc_pcrel34:
       switch (Modifier) {

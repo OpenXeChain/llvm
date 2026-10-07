@@ -150,6 +150,11 @@ public:
     if (!Value) return;           // Doesn't change encoding.
 
     unsigned Offset = Fixup.getOffset();
+    // Xbox COFF relocations identify the instruction start. DS addends still
+    // belong in its low halfword, rather than in the opcode/register fields.
+    if (TT.isXbox360() &&
+        Kind == static_cast<MCFixupKind>(PPC::fixup_ppc_half16ds))
+      Offset += 2;
     unsigned NumBytes = getFixupKindNumBytes(Kind);
 
     // For each byte of the fragment that the fixup touches, mask in the bits

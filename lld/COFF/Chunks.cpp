@@ -209,6 +209,17 @@ void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
     add32be(off, s + imageBase);
     break;
   }
+  case IMAGE_REL_PPC_ADDR14: {
+    uint16_t field = read16be(off + 2);
+    int16_t addend = static_cast<int16_t>(field & 0xfffc);
+    uint64_t value = s + imageBase + addend;
+    if (value & 3) {
+      error("misaligned PowerPC ADDR14 relocation in " + toString(file));
+      break;
+    }
+    write16be(off + 2, (value & 0xfffc) | (field & 3));
+    break;
+  }
   case IMAGE_REL_PPC_SECREL: {
     applySecRel(this, off, os, s, endianness::big);
     break;
