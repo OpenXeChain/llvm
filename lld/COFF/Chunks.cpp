@@ -182,27 +182,21 @@ void applyRelPPC_REL24(uint8_t *off, uint64_t instructionAddress,
   write32be(off, instr);
 }
 
-uint64_t lastPairValue = 0;
 void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
                                uint64_t s, uint64_t p,
-                               uint64_t imageBase) const {
+                               uint64_t imageBase, int16_t pairAddend) const {
 
   switch (type) {
   case IMAGE_REL_PPC_ABSOLUTE: {
     break;
   }    
   case IMAGE_REL_PPC_REFHI: {
-    write16be(off + 2, (s + imageBase + 0x8000) >> 16); 
-    lastPairValue = 0;
+    uint32_t addend = (uint32_t(read16be(off + 2)) << 16) + pairAddend;
+    write16be(off + 2, (s + imageBase + addend + 0x8000) >> 16);
     break;
   }
   case IMAGE_REL_PPC_REFLO: {
-    write16be(off + 2, (s + imageBase) & 0xFFFF); 
-    lastPairValue = 0;
-    break;
-  }
-  case IMAGE_REL_PPC_PAIR: {
-    lastPairValue = read16be(off + 2);
+    write16be(off + 2, read16be(off + 2) + s + imageBase);
     break;
   }
   case IMAGE_REL_PPC_ADDR32: {
@@ -500,7 +494,22 @@ void SectionChunk::writeTo(uint8_t *buf) const {
 
 void SectionChunk::applyRelocation(uint8_t *off,
                                    const coff_relocation &rel) const {
-  auto *sym = dyn_cast_or_null<Defined>(file->getSymbol(rel.SymbolTableIndex));
+  int16_t pairAddend = 0;
+  if (getArch() == Triple::ppc) {
+    if (rel.Type == IMAGE_REL_PPC_PAIR)
+      return;
+    if (rel.Type == IMAGE_REL_PPC_REFHI) {
+      ArrayRef<coff_relocation> relocs = getRelocs();
+      size_t index = &rel - relocs.data();
+      if (index + 1 == relocs.size() ||
+          relocs[index + 1].Type != IMAGE_REL_PPC_PAIR) {
+        error("missing PowerPC REFHI PAIR relocation in " + toString(file));
+        return;
+      }
+      pairAddend = static_cast<int16_t>(relocs[index + 1].SymbolTableIndex);
+    }
+  }
+  auto *sym = dyn_cast_or_null<Defined>(file->getRelocationSymbol(rel));
 
   // Get the output section of the symbol for this relocation.  The output
   // section is needed to compute SECREL and SECTION relocations used in debug
@@ -538,7 +547,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
     applyRelARM64(off, rel.Type, os, s, p, imageBase);
     break;
   case Triple::ppc:
-    applyRelPPC(off, rel.Type, os, s, p, imageBase);
+    applyRelPPC(off, rel.Type, os, s, p, imageBase, pairAddend);
     break;
   default:
     llvm_unreachable("unknown machine type");
@@ -556,7 +565,7 @@ void SectionChunk::sortRelocations() {
   MutableArrayRef<coff_relocation> newRelocs(
       bAlloc().Allocate<coff_relocation>(relocsSize), relocsSize);
   memcpy(newRelocs.data(), relocsData, relocsSize * sizeof(coff_relocation));
-  llvm::sort(newRelocs, cmpByVa);
+  llvm::stable_sort(newRelocs, cmpByVa);
   setRelocs(newRelocs);
 }
 
@@ -640,7 +649,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
     uint8_t ty = getBaserelType(rel, getArch());
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
-    Symbol *target = file->getSymbol(rel.SymbolTableIndex);
+    Symbol *target = file->getRelocationSymbol(rel);
     if (!target || isa<DefinedAbsolute>(target))
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
@@ -750,7 +759,7 @@ void SectionChunk::getRuntimePseudoRelocs(
     std::vector<RuntimePseudoReloc> &res) {
   for (const coff_relocation &rel : getRelocs()) {
     auto *target =
-        dyn_cast_or_null<Defined>(file->getSymbol(rel.SymbolTableIndex));
+        dyn_cast_or_null<Defined>(file->getRelocationSymbol(rel));
     if (!target || !target->isRuntimePseudoReloc)
       continue;
     // If the target doesn't have a chunk allocated, it may be a

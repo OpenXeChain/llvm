@@ -244,7 +244,7 @@ public:
   public:
     symbol_iterator() = default;
 
-    Symbol *operator*() const { return file->getSymbol(I->SymbolTableIndex); }
+    Symbol *operator*() const { return file->getRelocationSymbol(*I); }
   };
 
   SectionChunk(ObjFile *file, const coff_section *header, Kind k = SectionKind);
@@ -278,7 +278,7 @@ public:
   void applyRelX86(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
                    uint64_t p, uint64_t imageBase) const;
   void applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
-                   uint64_t p, uint64_t imageBase) const;
+                   uint64_t p, uint64_t imageBase, int16_t pairAddend) const;
   void applyRelARM(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
                    uint64_t p, uint64_t imageBase) const;
   void applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,

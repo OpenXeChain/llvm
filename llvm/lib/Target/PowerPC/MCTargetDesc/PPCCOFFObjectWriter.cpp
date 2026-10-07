@@ -117,10 +117,11 @@ unsigned PPCCOFFObjectWriter::getRelocType(MCContext &Ctx,
         Type = COFF::IMAGE_REL_PPC_REFLO; // Low 16 bits
         break;
       case MCSymbolRefExpr::VK_PPC_HI:
-        Type = COFF::IMAGE_REL_PPC_REFHI; // High 16 bits
-        break;
+        Ctx.reportError(Fixup.getLoc(),
+                        "unsupported PowerPC COFF unadjusted high relocation");
+        return COFF::IMAGE_REL_PPC_ABSOLUTE;
       case MCSymbolRefExpr::VK_PPC_HA:
-        Type = COFF::IMAGE_REL_PPC_REFHI; // High adjusted (same as HI)
+        Type = COFF::IMAGE_REL_PPC_REFHI; // High adjusted, with PAIR
         break;
       }
       break;
