@@ -215,8 +215,8 @@ void SectionChunk::applyRelPPC(uint8_t *off, uint16_t type, OutputSection *os,
   }
 
   default:
-    printf("lld: Unimplemented reloc type for ppc32 PE %d\n", type);
-    ///llvm_unreachable("lld: Unimplemented reloc type for ppc32 PE");
+    error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
+          toString(file));
   }
 }
 
