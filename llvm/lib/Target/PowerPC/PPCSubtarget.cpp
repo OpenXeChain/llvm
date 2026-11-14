@@ -107,6 +107,13 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
 
+  // Xenon has 64-bit GPR values but 32-bit pointers. Its native ABI passes
+  // an i64 in one GPR, rather than the PPC32 ELF register-pair convention.
+  if (TargetTriple.isXbox360()) {
+    Has64BitSupport = true;
+    Use64BitRegs = true;
+  }
+
   if (TargetTriple.isPPC32SecurePlt())
     IsSecurePlt = true;
 

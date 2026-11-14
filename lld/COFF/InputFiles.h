@@ -162,6 +162,14 @@ public:
     return symbols[symbolIndex];
   }
 
+  // PowerPC PAIR records carry a displacement rather than a symbol index.
+  Symbol *getRelocationSymbol(const llvm::object::coff_relocation &rel) {
+    if (getMachineType() == llvm::COFF::IMAGE_FILE_MACHINE_XBOX360 &&
+        rel.Type == llvm::COFF::IMAGE_REL_PPC_PAIR)
+      return nullptr;
+    return getSymbol(rel.SymbolTableIndex);
+  }
+
   // Returns the underlying COFF file.
   COFFObjectFile *getCOFFObj() { return coffObj.get(); }
 

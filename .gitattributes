@@ -140,3 +140,6 @@ libcxx/include/valarray                     merge=libcxx-reformat
 libcxx/include/variant                      merge=libcxx-reformat
 libcxx/include/vector                       merge=libcxx-reformat
 libcxx/include/version                      merge=libcxx-reformat
+
+# CMake executes this shell script, including when a Windows checkout is used in WSL.
+llvm/cmake/config.guess text eol=lf

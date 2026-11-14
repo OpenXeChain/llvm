@@ -13,6 +13,42 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
+namespace {
+// Xbox360 keeps 32-bit pointers but uses one eight-byte home per argument.
+class Xbox360ABIInfo final : public DefaultABIInfo {
+public:
+  explicit Xbox360ABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                  AggValueSlot Slot) const override {
+    Address Home(CGF.Builder.CreateLoad(VAListAddr), CGF.Int8Ty,
+                 CharUnits::fromQuantity(4));
+    Address Next = CGF.Builder.CreateConstInBoundsByteGEP(
+        Home, CharUnits::fromQuantity(8));
+    CGF.Builder.CreateStore(Next.emitRawPointer(CGF), VAListAddr);
+    bool Indirect = isAggregateTypeForABI(Ty);
+    CharUnits Size = Indirect ? CharUnits::fromQuantity(4)
+                             : getContext().getTypeSizeInChars(Ty);
+    if (Size.getQuantity() > 8)
+      llvm::report_fatal_error("unsupported Xbox360 variadic argument type");
+    Home = CGF.Builder.CreateConstInBoundsByteGEP(
+        Home, CharUnits::fromQuantity(8) - Size);
+    llvm::Type *ElementTy = CGF.ConvertTypeForMem(Ty);
+    Address Arg = Home.withElementType(Indirect ? CGF.VoidPtrTy : ElementTy);
+    if (Indirect)
+      Arg = Address(CGF.Builder.CreateLoad(Arg), ElementTy,
+                    getContext().getTypeAlignInChars(Ty));
+    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Arg, Ty), Slot);
+  }
+};
+
+class Xbox360TargetCodeGenInfo final : public TargetCodeGenInfo {
+public:
+  explicit Xbox360TargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<Xbox360ABIInfo>(CGT)) {}
+};
+} // namespace
+
 static RValue complexTempStructure(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, CharUnits SlotSize,
                                    CharUnits EltSize, const ComplexType *CTy) {
@@ -1034,6 +1070,8 @@ CodeGen::createAIXTargetCodeGenInfo(CodeGenModule &CGM, bool Is64Bit) {
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createPPC32TargetCodeGenInfo(CodeGenModule &CGM, bool SoftFloatABI) {
+  if (CGM.getTriple().isXbox360())
+    return std::make_unique<Xbox360TargetCodeGenInfo>(CGM.getTypes());
   bool RetSmallStructInRegABI = PPC32TargetCodeGenInfo::isStructReturnInRegABI(
       CGM.getTriple(), CGM.getCodeGenOpts());
   return std::make_unique<PPC32TargetCodeGenInfo>(CGM.getTypes(), SoftFloatABI,

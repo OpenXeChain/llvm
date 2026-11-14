@@ -40,7 +40,9 @@ EnablePEVectorSpills("ppc-enable-pe-vector-spills",
                      cl::desc("Enable spills in prologue to vector registers."),
                      cl::init(false), cl::Hidden);
 
-static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
+static int64_t computeReturnSaveOffset(const PPCSubtarget &STI) {
+  if (STI.isXbox360ABI())
+    return -8;
   if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
   // SVR4 ABI:
@@ -54,6 +56,8 @@ static unsigned computeTOCSaveOffset(const PPCSubtarget &STI) {
 }
 
 static unsigned computeFramePointerSaveOffset(const PPCSubtarget &STI) {
+  if (STI.isXbox360ABI())
+    return -8U;
   // First slot in the general register save area.
   return STI.isPPC64() ? -8U : -4U;
 }
@@ -71,6 +75,8 @@ static unsigned computeLinkageSize(const PPCSubtarget &STI) {
 }
 
 static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
+  if (STI.isXbox360ABI())
+    return -16U;
   // Third slot in the general purpose register save area.
   if (STI.is32BitELFABI() && STI.getTargetMachine().isPositionIndependent())
     return -12U;
@@ -222,6 +228,14 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       {PPC::VRSAVE, -4},
       CALLEE_SAVED_VRS
   };
+
+  static const SpillSlot Xbox360Offsets[] = {
+      CALLEE_SAVED_FPRS, CALLEE_SAVED_GPRS64, {PPC::CR2, -4},
+      {PPC::VRSAVE, -4}, CALLEE_SAVED_VRS};
+  if (Subtarget.isXbox360ABI()) {
+    NumEntries = std::size(Xbox360Offsets);
+    return Xbox360Offsets;
+  }
 
   static const SpillSlot AIXOffsets32[] = {CALLEE_SAVED_FPRS,
                                            CALLEE_SAVED_GPRS32,
@@ -665,6 +679,15 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
                                                 : PPC::MFLR );
   const MCInstrDesc& StoreInst = TII.get(isPPC64 ? PPC::STD
                                                  : PPC::STW );
+  const MCInstrDesc& PointerStoreInst =
+      TII.get(Subtarget.isXbox360ABI() ? PPC::STD : StoreInst.getOpcode());
+
+  // Widen only Xbox360 frame/base pointer saves; preserve other ABIs.
+  auto WideReg = [&](Register R) -> Register {
+    if (!Subtarget.isXbox360ABI())
+      return R;
+    return RegInfo->getMatchingSuperReg(R, PPC::sub_32, &PPC::G8RCRegClass);
+  };
   const MCInstrDesc& StoreUpdtInst = TII.get(isPPC64 ? PPC::STDU
                                                      : PPC::STWU );
   const MCInstrDesc& StoreUpdtIdxInst = TII.get(isPPC64 ? PPC::STDUX
@@ -826,8 +849,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (HasRedZone) {
     if (HasFP)
-      BuildMI(MBB, MBBI, dl, StoreInst)
-        .addReg(FPReg)
+      BuildMI(MBB, MBBI, dl, PointerStoreInst)
+        .addReg(WideReg(FPReg))
         .addImm(FPOffset)
         .addReg(SPReg);
     if (FI->usesPICBase())
@@ -836,8 +859,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm(PBPOffset)
         .addReg(SPReg);
     if (HasBP)
-      BuildMI(MBB, MBBI, dl, StoreInst)
-        .addReg(BPReg)
+      BuildMI(MBB, MBBI, dl, PointerStoreInst)
+        .addReg(WideReg(BPReg))
         .addImm(BPOffset)
         .addReg(SPReg);
   }
@@ -1021,8 +1044,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(FPOffset-LastOffset);
           LastOffset = FPOffset;
           // Store FP into *R0.
-          BuildMI(MBB, MBBI, dl, TII.get(PPC::STWX))
-            .addReg(FPReg, RegState::Kill)  // Save FP.
+          BuildMI(MBB, MBBI, dl,
+                  TII.get(Subtarget.isXbox360ABI() ? PPC::STDX : PPC::STWX))
+            .addReg(WideReg(FPReg), RegState::Kill) // Save FP.
             .addReg(PPC::ZERO)
             .addReg(ScratchReg);  // This will be the index (R0 is ok here).
         }
@@ -1043,8 +1067,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
             .addReg(ScratchReg)
             .addImm(BPOffset-LastOffset);
           LastOffset = BPOffset;
-          BuildMI(MBB, MBBI, dl, TII.get(PPC::STWX))
-            .addReg(BPReg, RegState::Kill)  // Save BP.
+          BuildMI(MBB, MBBI, dl,
+                  TII.get(Subtarget.isXbox360ABI() ? PPC::STDX : PPC::STWX))
+            .addReg(WideReg(BPReg), RegState::Kill) // Save BP.
             .addReg(PPC::ZERO)
             .addReg(ScratchReg);  // This will be the index (R0 is ok here).
           // BP = R0-LastOffset
@@ -1059,8 +1084,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // Now that the stack frame has been allocated, save all the necessary
         // registers using ScratchReg as the base address.
         if (HasFP)
-          BuildMI(MBB, MBBI, dl, StoreInst)
-            .addReg(FPReg)
+          BuildMI(MBB, MBBI, dl, PointerStoreInst)
+            .addReg(WideReg(FPReg))
             .addImm(FPOffset)
             .addReg(ScratchReg);
         if (FI->usesPICBase())
@@ -1069,8 +1094,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(PBPOffset)
             .addReg(ScratchReg);
         if (HasBP) {
-          BuildMI(MBB, MBBI, dl, StoreInst)
-            .addReg(BPReg)
+          BuildMI(MBB, MBBI, dl, PointerStoreInst)
+            .addReg(WideReg(BPReg))
             .addImm(BPOffset)
             .addReg(ScratchReg);
           BuildMI(MBB, MBBI, dl, OrInst, BPReg)
@@ -1084,8 +1109,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       // Since the SPReg has been decreased by FrameSize, add it back to each
       // offset.
       if (HasFP)
-        BuildMI(MBB, MBBI, dl, StoreInst)
-          .addReg(FPReg)
+        BuildMI(MBB, MBBI, dl, PointerStoreInst)
+          .addReg(WideReg(FPReg))
           .addImm(FrameSize + FPOffset)
           .addReg(SPReg);
       if (FI->usesPICBase())
@@ -1094,8 +1119,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
           .addImm(FrameSize + PBPOffset)
           .addReg(SPReg);
       if (HasBP) {
-        BuildMI(MBB, MBBI, dl, StoreInst)
-          .addReg(BPReg)
+        BuildMI(MBB, MBBI, dl, PointerStoreInst)
+          .addReg(WideReg(BPReg))
           .addImm(FrameSize + BPOffset)
           .addReg(SPReg);
         BuildMI(MBB, MBBI, dl, TII.get(PPC::ADDI), BPReg)
@@ -1601,6 +1626,15 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   const MCInstrDesc &HashChk =
       TII.get(isPPC64 ? (HasPrivileged ? PPC::HASHCHKP8 : PPC::HASHCHK8)
                       : (HasPrivileged ? PPC::HASHCHKP : PPC::HASHCHK));
+  const MCInstrDesc& PointerLoadInst =
+      TII.get(Subtarget.isXbox360ABI() ? PPC::LD : LoadInst.getOpcode());
+
+  // Widen only Xbox360 frame/base pointer saves; preserve other ABIs.
+  auto WideReg = [&](Register R) -> Register {
+    if (!Subtarget.isXbox360ABI())
+      return R;
+    return RegInfo->getMatchingSuperReg(R, PPC::sub_32, &PPC::G8RCRegClass);
+  };
   int64_t LROffset = getReturnSaveOffset();
 
   int64_t FPOffset = 0;
@@ -1813,11 +1847,11 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     // If there is red zone, restore FP directly, since SP has already been
     // restored. Otherwise, restore the value of FP into ScratchReg.
     if (HasRedZone || RBReg == SPReg)
-      BuildMI(MBB, MBBI, dl, LoadInst, FPReg)
+      BuildMI(MBB, MBBI, dl, PointerLoadInst, WideReg(FPReg))
         .addImm(FPOffset)
         .addReg(SPReg);
     else
-      BuildMI(MBB, MBBI, dl, LoadInst, ScratchReg)
+      BuildMI(MBB, MBBI, dl, PointerLoadInst, WideReg(ScratchReg))
         .addImm(FPOffset)
         .addReg(RBReg);
   }
@@ -1828,7 +1862,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       .addReg(RBReg);
 
   if (HasBP)
-    BuildMI(MBB, MBBI, dl, LoadInst, BPReg)
+    BuildMI(MBB, MBBI, dl, PointerLoadInst, WideReg(BPReg))
       .addImm(BPOffset)
       .addReg(RBReg);
 
@@ -1848,9 +1882,11 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
     assert(RBReg != ScratchReg && "Should be using FP or SP as base register");
     if (RBReg == FPReg)
-      BuildMI(MBB, MBBI, dl, OrInst, FPReg)
-        .addReg(ScratchReg)
-        .addReg(ScratchReg);
+      BuildMI(MBB, MBBI, dl,
+              TII.get(Subtarget.isXbox360ABI() ? PPC::OR8 : OrInst.getOpcode()),
+              WideReg(FPReg))
+        .addReg(WideReg(ScratchReg))
+        .addReg(WideReg(ScratchReg));
 
     // Now load the LR from the caller's stack frame.
     if (MustSaveLR && !LoadedLR)
@@ -2001,11 +2037,15 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // If the frame pointer save index hasn't been defined yet.
+  if (Subtarget.isXbox360ABI() && FI->mustSaveLR() &&
+      !FI->getReturnAddrSaveIndex())
+    FI->setReturnAddrSaveIndex(MFI.CreateFixedObject(4, -8, false));
   if (!FPSI && needsFP(MF)) {
     // Find out what the fix offset of the frame pointer save area.
     int FPOffset = getFramePointerSaveOffset();
     // Allocate the frame index for frame pointer save area.
-    FPSI = MFI.CreateFixedObject(isPPC64? 8 : 4, FPOffset, true);
+    FPSI = MFI.CreateFixedObject((isPPC64 || Subtarget.isXbox360ABI()) ? 8 : 4,
+                               FPOffset, true);
     // Save the result.
     FI->setFramePointerSaveIndex(FPSI);
   }
@@ -2014,7 +2054,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (!BPSI && RegInfo->hasBasePointer(MF)) {
     int BPOffset = getBasePointerSaveOffset();
     // Allocate the frame index for the base pointer save area.
-    BPSI = MFI.CreateFixedObject(isPPC64? 8 : 4, BPOffset, true);
+    BPSI = MFI.CreateFixedObject((isPPC64 || Subtarget.isXbox360ABI()) ? 8 : 4,
+                               BPOffset, true);
     // Save the result.
     FI->setBasePointerSaveIndex(BPSI);
   }
@@ -2031,9 +2072,11 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // frame pointer and are using r31's spill slot for the prologue/epilogue
   // code. Same goes for the base pointer and the PIC base register.
   if (needsFP(MF))
-    SavedRegs.reset(isPPC64 ? PPC::X31 : PPC::R31);
+    SavedRegs.reset((isPPC64 || Subtarget.isXbox360ABI()) ? PPC::X31 : PPC::R31);
   if (RegInfo->hasBasePointer(MF)) {
     SavedRegs.reset(RegInfo->getBaseRegister(MF));
+    if (Subtarget.isXbox360ABI())
+      SavedRegs.reset(PPC::X30);
     // On AIX, when BaseRegister(R30) is used, need to spill r31 too to match
     // AIX trackback table requirement.
     if (!needsFP(MF) && !SavedRegs.test(isPPC64 ? PPC::X31 : PPC::R31) &&
@@ -2162,7 +2205,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   PPCFunctionInfo *PFI = MF.getInfo<PPCFunctionInfo>();
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
-  int64_t LowerBound = 0;
+  // Xbox360's LR occupies entry-SP-8; nonvolatile areas start below it.
+  int64_t LowerBound = Subtarget.isXbox360ABI() ? -8 : 0;
 
   // Take into account stack space reserved for tail calls.
   int TCSPDelta = 0;
@@ -2243,7 +2287,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
       std::min<unsigned>(TRI->getEncodingValue(MinGPR),
                          TRI->getEncodingValue(MinG8R));
 
-    const unsigned GPRegSize = Subtarget.isPPC64() ? 8 : 4;
+    const unsigned GPRegSize =
+        (Subtarget.isPPC64() || Subtarget.isXbox360ABI()) ? 8 : 4;
     LowerBound -= (31 - MinReg + 1) * GPRegSize;
   }
 

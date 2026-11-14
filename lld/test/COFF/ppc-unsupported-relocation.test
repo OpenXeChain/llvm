@@ -1,0 +1,12 @@
+# RUN: rm -f "%t.rel14.exe" "%t.addr16.exe"
+# RUN: %python "%S/Inputs/ppc-relocation.py" "%t.obj" 0
+# RUN: lld-link /entry:main /subsystem:xbox360 /nodefaultlib /fixed /out:"%t.exe" "%t.obj"
+# RUN: %python "%S/Inputs/ppc-relocation.py" "%t.obj" 7
+# RUN: not lld-link /entry:main /subsystem:xbox360 /nodefaultlib /fixed /out:"%t.rel14.exe" "%t.obj" 2>&1 | FileCheck "%s" --check-prefix=REL14
+# RUN: %python -c "from pathlib import Path; assert not Path(r'%t.rel14.exe').exists()"
+# RUN: %python "%S/Inputs/ppc-relocation.py" "%t.obj" 4
+# RUN: not lld-link /entry:main /subsystem:xbox360 /nodefaultlib /fixed /out:"%t.addr16.exe" "%t.obj" 2>&1 | FileCheck "%s" --check-prefix=ADDR16
+# RUN: %python -c "from pathlib import Path; assert not Path(r'%t.addr16.exe').exists()"
+
+# REL14: error: unsupported relocation type 0x7 in {{.*}}.obj
+# ADDR16: error: unsupported relocation type 0x4 in {{.*}}.obj

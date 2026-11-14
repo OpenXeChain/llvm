@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
@@ -65,6 +66,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case PPC::fixup_ppc_half16dq:
     return 2;
   case FK_Data_4:
+  case FK_SecRel_4:
   case PPC::fixup_ppc_brcond14:
   case PPC::fixup_ppc_brcond14abs:
   case PPC::fixup_ppc_br24:
@@ -145,10 +147,23 @@ public:
     MCFixupKind Kind = Fixup.getKind();
     if (Kind >= FirstLiteralRelocationKind)
       return;
+    if (TT.isXbox360() &&
+        Kind == static_cast<MCFixupKind>(PPC::fixup_ppc_half16ds) &&
+        (Value & 3)) {
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                  "misaligned PowerPC COFF DS addend");
+      return;
+    }
     Value = adjustFixupValue(Kind, Value);
     if (!Value) return;           // Doesn't change encoding.
 
     unsigned Offset = Fixup.getOffset();
+    // Xbox360 COFF relocations identify the instruction start; immediate
+    // addends belong in its low halfword, not the opcode/register fields.
+    if (TT.isXbox360() &&
+        (Kind == static_cast<MCFixupKind>(PPC::fixup_ppc_half16) ||
+         Kind == static_cast<MCFixupKind>(PPC::fixup_ppc_half16ds)))
+      Offset += 2;
     unsigned NumBytes = getFixupKindNumBytes(Kind);
 
     // For each byte of the fragment that the fixup touches, mask in the bits

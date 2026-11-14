@@ -497,7 +497,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
         file->getCOFFObj()->getRelocations(sc->header);
     for (size_t j = 0, e = originalRelocs.size(); j < e; ++j) {
       const coff_relocation &rel = originalRelocs[j];
-      Symbol *relocTarget = file->getSymbol(rel.SymbolTableIndex);
+      Symbol *relocTarget = file->getRelocationSymbol(rel);
 
       // The estimate of the source address P should be pretty accurate,
       // but we don't know whether the target Symbol address should be
@@ -626,7 +626,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
 
     ArrayRef<coff_relocation> relocs = sc->getRelocs();
     for (const coff_relocation &rel : relocs) {
-      Symbol *relocTarget = sc->file->getSymbol(rel.SymbolTableIndex);
+      Symbol *relocTarget = sc->file->getRelocationSymbol(rel);
 
       Defined *sym = dyn_cast_or_null<Defined>(relocTarget);
       if (!sym)
@@ -2028,7 +2028,7 @@ void Writer::markSymbolsWithRelocations(ObjFile *file,
         // since they're also used to compute absolute addresses.
         continue;
 
-      Symbol *ref = sc->file->getSymbol(reloc.SymbolTableIndex);
+      Symbol *ref = sc->file->getRelocationSymbol(reloc);
       maybeAddAddressTakenFunction(usedSymbols, ref);
     }
   }

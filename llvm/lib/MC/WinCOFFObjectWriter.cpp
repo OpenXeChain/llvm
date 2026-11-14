@@ -993,12 +993,14 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
 
     if (Header.Machine == COFF::IMAGE_FILE_MACHINE_XBOX360 &&
         (Reloc.Data.Type == COFF::IMAGE_REL_PPC_REFHI ||
-         Reloc.Data.Type == COFF::IMAGE_REL_PPC_SECRELHI ||
-         Reloc.Data.Type == COFF::IMAGE_REL_PPC_REFLO || Reloc.Data.Type == COFF::IMAGE_REL_PPC_SECRELLO)) {
-      // IMAGE_REL_PPC_REFHI, IMAGE_REL_PPC_SECRELHI, IMAGE_REL_PPC_REFLO and IMAGE_REL_PPC_SECRELLO *must*
-      // be followed by IMAGE_REL_PPC_PAIR
+         Reloc.Data.Type == COFF::IMAGE_REL_PPC_SECRELHI)) {
+      // REFHI/SECRELHI carry the adjusted upper half in the instruction.
+      // PAIR carries the signed lower half, not a symbol table index.
       auto RelocPair = Reloc;
       RelocPair.Data.Type = COFF::IMAGE_REL_PPC_PAIR;
+      RelocPair.Data.SymbolTableIndex =
+          static_cast<uint32_t>(static_cast<int16_t>(FixedValue));
+      FixedValue = (FixedValue + 0x8000) >> 16;
       Sec->Relocations.push_back(RelocPair);
     }
   }
