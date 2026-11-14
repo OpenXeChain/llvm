@@ -5,7 +5,7 @@
 # RUN: lld-link /entry:main /subsystem:xbox360 /nodefaultlib /fixed /base:0x82000000 /align:65536 /opt:ref,icf /export:cb1 /export:cb2 /out:%t.exe %t/main.obj %t/data.obj
 # RUN: llvm-readobj --sections --section-data %t.exe | FileCheck %s
 # RUN: llvm-readobj --coff-exports %t.exe | FileCheck %s --check-prefix=ICF
-# RUN: %python %t/bad-pair.py %t/main.obj %t/bad.obj
+# RUN: %python %S/Inputs/ppc-remove-pair.py %t/main.obj %t/bad.obj
 # RUN: not lld-link /entry:main /subsystem:xbox360 /nodefaultlib /fixed /out:%t-bad.exe %t/bad.obj %t/data.obj 2>&1 | FileCheck %s --check-prefix=PAIR
 # RUN: not llvm-mc -triple=ppc32-unknown-xbox360 -filetype=obj %t/high.s -o %t/high.obj 2>&1 | FileCheck %s --check-prefix=HIGH
 # External and temporary-symbol addends, adjusted-high carry, and resolved
@@ -61,19 +61,3 @@ target=0x82020000
 #--- high.s
 .text
 lis 3,target@h
-#--- bad-pair.py
-import struct,sys
-data=bytearray(open(sys.argv[1],'rb').read())
-count=struct.unpack_from('<H',data,2)[0]
-for i in range(count):
-    section=20+i*40
-    relocs=struct.unpack_from('<I',data,section+24)[0]
-    countrel=struct.unpack_from('<H',data,section+32)[0]
-    for j in range(countrel):
-        offset=relocs+j*10+8
-        if struct.unpack_from('<H',data,offset)[0]==0x12:
-            struct.pack_into('<H',data,offset,0)
-            struct.pack_into('<I',data,offset-4,0)
-            open(sys.argv[2],'wb').write(data)
-            sys.exit()
-raise RuntimeError('No PAIR found')

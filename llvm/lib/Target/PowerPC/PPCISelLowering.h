@@ -1388,7 +1388,7 @@ namespace llvm {
         SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
         const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
         SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const;
-    SDValue LowerFormalArguments_Xbox(
+    SDValue LowerFormalArguments_Xbox360(
         SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
         const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
         SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const;
@@ -1427,7 +1427,7 @@ namespace llvm {
                           const SDLoc &dl, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals,
                           const CallBase *CB) const;
-    SDValue LowerCall_Xbox(SDValue Chain, SDValue Callee, CallFlags CFlags,
+    SDValue LowerCall_Xbox360(SDValue Chain, SDValue Callee, CallFlags CFlags,
                           const SmallVectorImpl<ISD::OutputArg> &Outs,
                           const SmallVectorImpl<SDValue> &OutVals,
                           const SmallVectorImpl<ISD::InputArg> &Ins,

@@ -14,10 +14,10 @@ using namespace clang;
 using namespace clang::CodeGen;
 
 namespace {
-// Xbox keeps 32-bit pointers but uses one eight-byte home per argument.
-class XboxABIInfo final : public DefaultABIInfo {
+// Xbox360 keeps 32-bit pointers but uses one eight-byte home per argument.
+class Xbox360ABIInfo final : public DefaultABIInfo {
 public:
-  explicit XboxABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+  explicit Xbox360ABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                   AggValueSlot Slot) const override {
@@ -30,7 +30,7 @@ public:
     CharUnits Size = Indirect ? CharUnits::fromQuantity(4)
                              : getContext().getTypeSizeInChars(Ty);
     if (Size.getQuantity() > 8)
-      llvm::report_fatal_error("unsupported Xbox variadic argument type");
+      llvm::report_fatal_error("unsupported Xbox360 variadic argument type");
     Home = CGF.Builder.CreateConstInBoundsByteGEP(
         Home, CharUnits::fromQuantity(8) - Size);
     llvm::Type *ElementTy = CGF.ConvertTypeForMem(Ty);
@@ -42,10 +42,10 @@ public:
   }
 };
 
-class XboxTargetCodeGenInfo final : public TargetCodeGenInfo {
+class Xbox360TargetCodeGenInfo final : public TargetCodeGenInfo {
 public:
-  explicit XboxTargetCodeGenInfo(CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<XboxABIInfo>(CGT)) {}
+  explicit Xbox360TargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<Xbox360ABIInfo>(CGT)) {}
 };
 } // namespace
 
@@ -1071,7 +1071,7 @@ CodeGen::createAIXTargetCodeGenInfo(CodeGenModule &CGM, bool Is64Bit) {
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createPPC32TargetCodeGenInfo(CodeGenModule &CGM, bool SoftFloatABI) {
   if (CGM.getTriple().isXbox360())
-    return std::make_unique<XboxTargetCodeGenInfo>(CGM.getTypes());
+    return std::make_unique<Xbox360TargetCodeGenInfo>(CGM.getTypes());
   bool RetSmallStructInRegABI = PPC32TargetCodeGenInfo::isStructReturnInRegABI(
       CGM.getTriple(), CGM.getCodeGenOpts());
   return std::make_unique<PPC32TargetCodeGenInfo>(CGM.getTypes(), SoftFloatABI,

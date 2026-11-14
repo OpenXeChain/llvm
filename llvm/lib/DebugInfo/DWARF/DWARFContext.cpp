@@ -2133,7 +2133,7 @@ public:
                    function_ref<void(Error)> HandleError,
                    function_ref<void(Error)> HandleWarning,
                    DWARFContext::ProcessDebugRelocations RelocAction)
-      // Xbox COFF headers are little-endian, but PowerPC section contents
+      // Xbox360 COFF headers are little-endian, but PowerPC section contents
       // (including DWARF and relocation addends) are big-endian.
       : IsLittleEndian(Obj.isLittleEndian() &&
                        !(Obj.isCOFF() && Obj.getArch() == Triple::ppc)),

@@ -387,8 +387,7 @@ void tools::CrossXbox360::Linker::ConstructJob(
   CmdArgs.push_back("/ENTRY:_start");
   CmdArgs.push_back(Args.MakeArgString("/OUT:" + std::string(Output.getFilename())));
 
-  // Xbox uses DWARF in big-endian COFF sections. Keep it when linking a
-  // debug build instead of discarding it or asking LLD to create a PDB.
+  // Preserve the DWARF this toolchain emits in Xbox360 COFF sections.
   if (const auto *A = Args.getLastArg(options::OPT_g_Group)) {
     if (!A->getOption().matches(options::OPT_g0) &&
         !A->getOption().matches(options::OPT_ggdb0))

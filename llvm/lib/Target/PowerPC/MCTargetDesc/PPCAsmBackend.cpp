@@ -158,7 +158,7 @@ public:
     if (!Value) return;           // Doesn't change encoding.
 
     unsigned Offset = Fixup.getOffset();
-    // Xbox COFF relocations identify the instruction start; immediate
+    // Xbox360 COFF relocations identify the instruction start; immediate
     // addends belong in its low halfword, not the opcode/register fields.
     if (TT.isXbox360() &&
         (Kind == static_cast<MCFixupKind>(PPC::fixup_ppc_half16) ||

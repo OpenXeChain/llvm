@@ -43,11 +43,14 @@ that is not implemented here. Do not infer full native C++ compatibility from
 the scalar implementation. Unknown split, vector and nested arguments are
 rejected rather than assigned System V locations.
 
-CodeGen/PowerPC/xbox-native-abi.ll verifies O0/O2 scalar lowering, preservation,
-varargs and internal byval call sequencing. Clang's xbox-varargs.c checks the
+CodeGen/PowerPC/xbox360-native-abi.ll verifies O0/O2 scalar lowering, preservation,
+varargs and internal byval call sequencing. Clang's xbox360-varargs.c checks the
 pointer va_list representation and access stride. The workspace console test
 uses independent assembler in both calling directions and must also be run on
-an Xbox; compiling the test alone is not a hardware result.
+an Xbox360; compiling the test alone is not a hardware result.
+
+Clang emits DWARF in big-endian COFF sections. For debug builds, the driver
+asks LLD to keep those sections with ``/DEBUG:DWARF``.
 
 All target libraries must be rebuilt after changing this ABI. Old objects and
 the former temporary XAM argument-nine bridge must not be mixed with it.

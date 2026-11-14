@@ -643,7 +643,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::VAARG, MVT::Other, Expand);
 
   // VACOPY is custom lowered with the 32-bit SVR4 ABI.
-  if (Subtarget.is32BitELFABI() && !Subtarget.isXboxABI())
+  if (Subtarget.is32BitELFABI() && !Subtarget.isXbox360ABI())
     setOperationAction(ISD::VACOPY            , MVT::Other, Custom);
   else
     setOperationAction(ISD::VACOPY            , MVT::Other, Expand);
@@ -3831,7 +3831,7 @@ SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   const Value *SV = cast<SrcValueSDNode>(Node->getOperand(2))->getValue();
   SDLoc dl(Node);
 
-  if (Subtarget.isXboxABI()) {
+  if (Subtarget.isXbox360ABI()) {
     SDValue Home = DAG.getLoad(PtrVT, dl, InChain, VAListPtr,
                               MachinePointerInfo(SV));
     SDValue Next = DAG.getNode(ISD::ADD, dl, PtrVT, Home,
@@ -3840,7 +3840,7 @@ SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
                                  MachinePointerInfo(SV));
     unsigned Size = VT.getStoreSize();
     if (Size > 8)
-      report_fatal_error("unsupported Xbox variadic argument type");
+      report_fatal_error("unsupported Xbox360 variadic argument type");
     SDValue Addr = DAG.getNode(ISD::ADD, dl, PtrVT, Home,
                                DAG.getConstant(8 - Size, dl, PtrVT));
     return DAG.getLoad(VT, dl, Chain, Addr, MachinePointerInfo(), Align(4));
@@ -4052,7 +4052,7 @@ SDValue PPCTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
 
   SDLoc dl(Op);
 
-  if (Subtarget.isPPC64() || Subtarget.isAIXABI() || Subtarget.isXboxABI()) {
+  if (Subtarget.isPPC64() || Subtarget.isAIXABI() || Subtarget.isXbox360ABI()) {
     // vastart just stores the address of the VarArgsFrameIndex slot into the
     // memory location argument.
     SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
@@ -4252,8 +4252,8 @@ SDValue PPCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
-  if (Subtarget.isXboxABI())
-    return LowerFormalArguments_Xbox(Chain, CallConv, isVarArg, Ins, dl, DAG,
+  if (Subtarget.isXbox360ABI())
+    return LowerFormalArguments_Xbox360(Chain, CallConv, isVarArg, Ins, dl, DAG,
                                      InVals);
   if (Subtarget.isAIXABI())
     return LowerFormalArguments_AIX(Chain, CallConv, isVarArg, Ins, dl, DAG,
@@ -4269,19 +4269,19 @@ SDValue PPCTargetLowering::LowerFormalArguments(
 // Native Xenon scalar ABI: 32-bit addresses, 64-bit GPRs, positional 8-byte
 // parameter homes beginning at SP+20. Fixed narrow stack values are at the
 // start of their home; variadic values are full 64-bit slots (right-adjusted).
-static const MCPhysReg XboxGPR[] = {PPC::R3, PPC::R4, PPC::R5, PPC::R6,
+static const MCPhysReg Xbox360GPR[] = {PPC::R3, PPC::R4, PPC::R5, PPC::R6,
                                     PPC::R7, PPC::R8, PPC::R9, PPC::R10};
-static const MCPhysReg XboxGPR64[] = {PPC::X3, PPC::X4, PPC::X5, PPC::X6,
+static const MCPhysReg Xbox360GPR64[] = {PPC::X3, PPC::X4, PPC::X5, PPC::X6,
                                       PPC::X7, PPC::X8, PPC::X9, PPC::X10};
 
-static void checkXboxArgument(MVT VT, ISD::ArgFlagsTy Flags) {
+static void checkXbox360Argument(MVT VT, ISD::ArgFlagsTy Flags) {
   if (Flags.isNest() || Flags.isSplit() ||
       (VT != MVT::i1 && VT != MVT::i32 && VT != MVT::i64 &&
        VT != MVT::f32 && VT != MVT::f64))
-    report_fatal_error("unsupported argument type in the Xbox native ABI");
+    report_fatal_error("unsupported argument type in the Xbox360 native ABI");
 }
 
-SDValue PPCTargetLowering::LowerFormalArguments_Xbox(
+SDValue PPCTargetLowering::LowerFormalArguments_Xbox360(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
@@ -4291,15 +4291,15 @@ SDValue PPCTargetLowering::LowerFormalArguments_Xbox(
   unsigned FloatIndex = 0;
   for (unsigned I = 0; I != Ins.size(); ++I) {
     MVT VT = Ins[I].VT;
-    checkXboxArgument(VT, Ins[I].Flags);
+    checkXbox360Argument(VT, Ins[I].Flags);
     bool Float = VT.isFloatingPoint();
     unsigned Reg = 0;
     const TargetRegisterClass *RC = nullptr;
     if (Float && FloatIndex < std::size(FPR)) {
       Reg = FPR[FloatIndex++];
       RC = VT == MVT::f32 ? &PPC::F4RCRegClass : &PPC::F8RCRegClass;
-    } else if (!Float && I < std::size(XboxGPR)) {
-      Reg = VT == MVT::i64 ? XboxGPR64[I] : XboxGPR[I];
+    } else if (!Float && I < std::size(Xbox360GPR)) {
+      Reg = VT == MVT::i64 ? Xbox360GPR64[I] : Xbox360GPR[I];
       RC = VT == MVT::i64 ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
     }
     MVT ValueVT = VT == MVT::i1 ? MVT::i32 : VT;
@@ -4325,8 +4325,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_Xbox(
     SmallVector<SDValue, 8> Stores;
     // Spill the unused full GPRs to the caller-provided contiguous homes.
     // Floating unnamed arguments are passed as integer bit patterns.
-    for (unsigned I = First; I < std::size(XboxGPR64); ++I) {
-      Register Reg = MF.addLiveIn(XboxGPR64[I], &PPC::G8RCRegClass);
+    for (unsigned I = First; I < std::size(Xbox360GPR64); ++I) {
+      Register Reg = MF.addLiveIn(Xbox360GPR64[I], &PPC::G8RCRegClass);
       SDValue Value = DAG.getCopyFromReg(Chain, dl, Reg, MVT::i64);
       int Home = MFI.CreateFixedObject(8, 20 + I * 8, false);
       Stores.push_back(DAG.getStore(Value.getValue(1), dl, Value,
@@ -5879,7 +5879,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
     Ops.push_back(DAG.getRegister(Subtarget.getTOCPointerRegister(), RegVT));
 
   // Add implicit use of CR bit 6 for 32-bit SVR4 vararg calls
-  if (CFlags.IsVarArg && Subtarget.is32BitELFABI() && !Subtarget.isXboxABI())
+  if (CFlags.IsVarArg && Subtarget.is32BitELFABI() && !Subtarget.isXbox360ABI())
     Ops.push_back(DAG.getRegister(PPC::CR1EQ, MVT::i32));
 
   // Add a register mask operand representing the call-preserved registers.
@@ -6026,7 +6026,7 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const GlobalValue *GV = G ? G->getGlobal() : nullptr;
     bool IsCalleeExternalSymbol = isa<ExternalSymbolSDNode>(Callee);
 
-    isTailCall = !Subtarget.isXboxABI() &&
+    isTailCall = !Subtarget.isXbox360ABI() &&
         isEligibleForTCO(GV, CallConv, CallerCC, CB, isVarArg, Outs, Ins,
                          &(MF.getFunction()), IsCalleeExternalSymbol);
     if (isTailCall) {
@@ -6069,8 +6069,8 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           any_of(Outs, [](ISD::OutputArg Arg) { return Arg.Flags.isNest(); }),
       CLI.NoMerge);
 
-  if (Subtarget.isXboxABI())
-    return LowerCall_Xbox(Chain, Callee, CFlags, Outs, OutVals, Ins, dl, DAG,
+  if (Subtarget.isXbox360ABI())
+    return LowerCall_Xbox360(Chain, Callee, CFlags, Outs, OutVals, Ins, dl, DAG,
                           InVals, CB);
 
   if (Subtarget.isAIXABI())
@@ -6085,7 +6085,7 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                           InVals, CB);
 }
 
-SDValue PPCTargetLowering::LowerCall_Xbox(
+SDValue PPCTargetLowering::LowerCall_Xbox360(
     SDValue Chain, SDValue Callee, CallFlags CFlags,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
@@ -6104,7 +6104,7 @@ SDValue PPCTargetLowering::LowerCall_Xbox(
   for (unsigned I = 0; I != Outs.size(); ++I) {
     MVT VT = Outs[I].VT;
     ISD::ArgFlagsTy Flags = Outs[I].Flags;
-    checkXboxArgument(VT, Flags);
+    checkXbox360Argument(VT, Flags);
     SDValue Value = OutVals[I];
     if (Flags.isByVal()) {
       int FI = MF.getFrameInfo().CreateStackObject(
@@ -6135,8 +6135,8 @@ SDValue PPCTargetLowering::LowerCall_Xbox(
     }
     if (Float && FloatIndex < std::size(FPR)) {
       Regs.emplace_back(FPR[FloatIndex++], Value);
-    } else if (!Float && I < std::size(XboxGPR)) {
-      Regs.emplace_back(VT == MVT::i64 ? XboxGPR64[I] : XboxGPR[I], Value);
+    } else if (!Float && I < std::size(Xbox360GPR)) {
+      Regs.emplace_back(VT == MVT::i64 ? Xbox360GPR64[I] : Xbox360GPR[I], Value);
     } else {
       unsigned Offset = 20 + I * 8;
       SDValue Addr = DAG.getNode(ISD::ADD, dl, PtrVT, Stack,
@@ -8198,7 +8198,7 @@ PPCTargetLowering::getFramePointerFrameIndex(SelectionDAG & DAG) const {
     // Find out what the fix offset of the frame pointer save area.
     int FPOffset = Subtarget.getFrameLowering()->getFramePointerSaveOffset();
     // Allocate the frame index for frame pointer save area.
-    FPSI = MF.getFrameInfo().CreateFixedObject((isPPC64 || Subtarget.isXboxABI()) ? 8 : 4, FPOffset, true);
+    FPSI = MF.getFrameInfo().CreateFixedObject((isPPC64 || Subtarget.isXbox360ABI()) ? 8 : 4, FPOffset, true);
     // Save the result.
     FI->setFramePointerSaveIndex(FPSI);
   }
