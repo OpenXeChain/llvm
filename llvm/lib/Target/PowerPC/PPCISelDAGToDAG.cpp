@@ -2923,8 +2923,9 @@ class IntegerCompareEliminator {
 public:
   IntegerCompareEliminator(SelectionDAG *DAG,
                            PPCDAGToDAGISel *Sel) : CurDAG(DAG), S(Sel) {
-    assert(CurDAG->getTargetLoweringInfo()
-           .getPointerTy(CurDAG->getDataLayout()).getSizeInBits() == 64 &&
+    assert(CurDAG->getMachineFunction()
+                   .getSubtarget<PPCSubtarget>()
+                   .isPPC64() &&
            "Only expecting to use this on 64 bit targets.");
   }
   SDNode *Select(SDNode *N) {
@@ -4474,9 +4475,7 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   ISD::CondCode CC =
       cast<CondCodeSDNode>(N->getOperand(IsStrict ? 3 : 2))->get();
-  EVT PtrVT =
-      CurDAG->getTargetLoweringInfo().getPointerTy(CurDAG->getDataLayout());
-  bool isPPC64 = (PtrVT == MVT::i64);
+  bool isPPC64 = Subtarget->isPPC64();
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
 
   SDValue LHS = N->getOperand(IsStrict ? 1 : 0);
@@ -5823,9 +5822,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::SELECT_CC: {
     ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
-    EVT PtrVT =
-        CurDAG->getTargetLoweringInfo().getPointerTy(CurDAG->getDataLayout());
-    bool isPPC64 = (PtrVT == MVT::i64);
+    bool isPPC64 = Subtarget->isPPC64();
 
     // If this is a select of i1 operands, we'll pattern match it.
     if (Subtarget->useCRBits() && N->getOperand(0).getValueType() == MVT::i1)
